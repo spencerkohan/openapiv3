@@ -63,9 +63,6 @@ impl<T> ReferenceOr<T> {
             reference: r.to_owned(),
         }
     }
-    pub fn item(item: T) -> Self {
-        ReferenceOr::Item(item)
-    }
     pub fn schema_ref(r: &str) -> Self {
         ReferenceOr::Reference {
             reference: format!("#/components/schemas/{}", r),
@@ -142,16 +139,6 @@ impl<T> ReferenceOr<T> {
     }
 }
 
-impl<T: 'static> ReferenceOr<T> {
-    pub fn as_ref(&self) -> ReferenceOr<&T> {
-        match self {
-            ReferenceOr::Reference { reference } => ReferenceOr::Reference { reference: reference.clone() },
-            ReferenceOr::Item(i) => ReferenceOr::Item(i),
-        }
-    }
-}
-
-
 impl ReferenceOr<Schema> {
     pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> &'a Schema {
         match self {
@@ -166,7 +153,7 @@ impl ReferenceOr<Schema> {
                         schema_ref.as_item()
                             .expect(&format!("The schema {} was used in a reference, but that schema is itself a reference to another schema.", schema))
                     }
-                    SchemaReference::Property { schema: ref schema_name, ref property } => {
+                    SchemaReference::Property { schema: schema_name, property } => {
                         let schema = spec.schemas().get(schema_name)
                             .expect(&format!("Schema {} not found in OpenAPI spec.", schema_name))
                             .as_item()
@@ -182,10 +169,6 @@ impl ReferenceOr<Schema> {
             }
             ReferenceOr::Item(schema) => schema,
         }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.as_item().map(|s| s.is_empty()).unwrap_or(false)
     }
 }
 
@@ -216,6 +199,44 @@ impl ReferenceOr<Parameter> {
 }
 
 
+impl ReferenceOr<Response> {
+    pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a Response> {
+        match self {
+            ReferenceOr::Reference { reference } => {
+                let name = get_response_name(&reference)?;
+                let components = spec.components.as_ref().unwrap();
+                components.responses.get(name)
+                    .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
+                    .as_item()
+                    .ok_or(anyhow!("{} is circular.", reference))
+            }
+            ReferenceOr::Item(response) => Ok(response),
+        }
+    }
+}
+
+impl ReferenceOr<RequestBody> {
+    pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a RequestBody> {
+        match self {
+            ReferenceOr::Reference { reference } => {
+                let name = get_request_body_name(&reference)?;
+                let components = spec.components.as_ref().unwrap();
+                components.request_bodies.get(name)
+                    .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
+                    .as_item()
+                    .ok_or(anyhow!("{} is circular.", reference))
+            }
+            ReferenceOr::Item(request_body) => Ok(request_body),
+        }
+    }
+}
+
+impl<T: Default> Default for ReferenceOr<T> {
+    fn default() -> Self {
+        ReferenceOr::Item(T::default())
+    }
+}
+
 fn parse_reference<'a>(reference: &'a str, group: &str) -> Result<&'a str> {
     let mut parts = reference.rsplitn(2, '/');
     let name = parts.next();
@@ -235,46 +256,6 @@ fn get_request_body_name(reference: &str) -> Result<&str> {
 
 fn get_parameter_name(reference: &str) -> Result<&str> {
     parse_reference(reference, "parameters")
-}
-
-impl ReferenceOr<Response> {
-    pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a Response> {
-        match self {
-            ReferenceOr::Reference { reference } => {
-                let name = get_response_name(&reference)?;
-                let components = spec.components.as_ref().unwrap();
-                components.responses.get(name)
-                    .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
-                    .as_item()
-                    .ok_or(anyhow!("{} is circular.", reference))
-            }
-            ReferenceOr::Item(response) => Ok(response),
-        }
-    }
-}
-
-
-impl ReferenceOr<RequestBody> {
-    pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a RequestBody> {
-        match self {
-            ReferenceOr::Reference { reference } => {
-                let name = get_request_body_name(&reference)?;
-                let components = spec.components.as_ref().unwrap();
-                components.request_bodies.get(name)
-                    .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
-                    .as_item()
-                    .ok_or(anyhow!("{} is circular.", reference))
-            }
-            ReferenceOr::Item(request_body) => Ok(request_body),
-        }
-    }
-}
-
-
-impl<T: Default> Default for ReferenceOr<T> {
-    fn default() -> Self {
-        ReferenceOr::Item(T::default())
-    }
 }
 
 #[cfg(test)]

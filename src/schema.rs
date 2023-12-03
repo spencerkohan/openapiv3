@@ -95,11 +95,11 @@ impl Schema {
         }
     }
 
-    pub fn new_str_enum(values: Vec<String>) -> Self {
+    pub fn new_str_enum(enumeration: Vec<String>) -> Self {
         Self {
             schema_data: SchemaData::default(),
             schema_kind: SchemaKind::Type(Type::String(StringType {
-                enumeration: values.into_iter().map(|s| s).collect(),
+                enumeration,
                 ..StringType::default()
             })),
         }
@@ -129,11 +129,11 @@ impl Schema {
         }
     }
 
-    pub fn new_array(inner: Schema) -> Self {
+    pub fn new_array(inner: ReferenceOr<Schema>) -> Self {
         Self {
             schema_data: SchemaData::default(),
             schema_kind: SchemaKind::Type(Type::Array(ArrayType {
-                items: Some(ReferenceOr::boxed_item(inner)),
+                items: Some(inner.boxed()),
                 ..ArrayType::default()
             }))
         }
@@ -156,27 +156,15 @@ impl Schema {
         }
     }
 
-    pub fn add_property(&mut self, s: &str, schema: Schema) -> Result<()> {
-        if let SchemaKind::Type(Type::Object(object_type)) = &mut self.schema_kind {
-            object_type.properties.insert(s.to_string(), ReferenceOr::Item(schema));
-            Ok(())
-        } else {
-            Err(anyhow!("Schema is not an object"))
-        }
-    }
-
-    pub fn add_property_ref(&mut self, s: &str, reference: &str) -> Result<()> {
-        if let SchemaKind::Type(Type::Object(object_type)) = &mut self.schema_kind {
-            object_type.properties.insert(s.to_string(), ReferenceOr::schema_ref(reference));
-            Ok(())
-        } else {
-            Err(anyhow!("Schema is not an object"))
-        }
+    pub fn add_property(&mut self, s: &str, schema: ReferenceOr<Schema>) -> Result<()> {
+        let p = self.properties_mut().ok_or_else(|| anyhow!("Schema is not an object"))?;
+        p.insert(s.to_string(), schema);
+        Ok(())
     }
 
     pub fn with_format(mut self, format: &str) -> Self {
         match &mut self.schema_kind {
-            SchemaKind::Type(Type::String(ref mut s)) => {
+            SchemaKind::Type(Type::String(s)) => {
                 s.format = serde_json::from_value(Value::String(format.to_string())).unwrap();
             }
             SchemaKind::OneOf { .. } => {}
