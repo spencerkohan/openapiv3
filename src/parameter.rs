@@ -132,6 +132,25 @@ pub enum Parameter {
 }
 
 impl Parameter {
+    pub fn query(name: impl Into<String>, schema: ReferenceOr<Schema>) -> Self {
+        Parameter::Query {
+            parameter_data: ParameterData {
+                name: name.into(),
+                description: None,
+                required: false,
+                deprecated: None,
+                format: ParameterSchemaOrContent::Schema(schema),
+                example: None,
+                examples: Default::default(),
+                explode: None,
+                extensions: Default::default(),
+            },
+            allow_reserved: false,
+            style: QueryStyle::Form,
+            allow_empty_value: None,
+        }
+    }
+
     /// Returns the `parameter_data` field of this [ParameterData].
     pub fn parameter_data(self) -> ParameterData {
         match self {
