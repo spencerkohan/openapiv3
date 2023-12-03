@@ -151,6 +151,23 @@ impl Parameter {
         }
     }
 
+    pub fn path(name: impl Into<String>, schema: ReferenceOr<Schema>) -> Self {
+        Parameter::Path {
+            parameter_data: ParameterData {
+                name: name.into(),
+                description: None,
+                required: true,
+                deprecated: None,
+                format: ParameterSchemaOrContent::Schema(schema),
+                example: None,
+                examples: Default::default(),
+                explode: None,
+                extensions: Default::default(),
+            },
+            style: PathStyle::Simple,
+        }
+    }
+
     /// Returns the `parameter_data` field of this [ParameterData].
     pub fn parameter_data(self) -> ParameterData {
         match self {
