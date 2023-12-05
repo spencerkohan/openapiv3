@@ -172,6 +172,12 @@ impl ReferenceOr<Schema> {
     }
 }
 
+impl<T> From<T> for ReferenceOr<T> {
+    fn from(item: T) -> Self {
+        ReferenceOr::Item(item)
+    }
+}
+
 impl ReferenceOr<Box<Schema>> {
     pub fn unbox(&self) -> ReferenceOr<Schema> {
         match self {
