@@ -129,11 +129,11 @@ impl Schema {
         }
     }
 
-    pub fn new_array(inner: ReferenceOr<Schema>) -> Self {
+    pub fn new_array(inner: impl Into<ReferenceOr<Schema>>) -> Self {
         Self {
             schema_data: SchemaData::default(),
             schema_kind: SchemaKind::Type(Type::Array(ArrayType {
-                items: Some(inner.boxed()),
+                items: Some(inner.into().boxed()),
                 ..ArrayType::default()
             }))
         }
