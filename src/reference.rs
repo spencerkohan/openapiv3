@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use crate::{OpenAPI, Parameter, RequestBody, Response, Schema};
@@ -139,33 +140,45 @@ impl<T> ReferenceOr<T> {
     }
 }
 
+fn resolve_helper<'a>(reference: &str, spec: &'a OpenAPI, seen: &mut HashSet<String>) -> &'a Schema {
+    if seen.contains(reference) {
+        panic!("Circular reference: {}", reference);
+    }
+    seen.insert(reference.to_string());
+    let reference = SchemaReference::from_str(&reference);
+    match &reference {
+        SchemaReference::Schema { ref schema } => {
+            let schema_ref = spec.schemas().get(schema)
+                .expect(&format!("Schema {} not found in OpenAPI spec.", schema));
+            // In theory both this as_item and the one below could have continue to be references
+            // but assum
+            match schema_ref {
+                ReferenceOr::Reference { reference } => {
+                    resolve_helper(reference, spec, seen)
+                }
+                ReferenceOr::Item(s) => s
+            }
+        }
+        SchemaReference::Property { schema: schema_name, property } => {
+            let schema = spec.schemas().get(schema_name)
+                .expect(&format!("Schema {} not found in OpenAPI spec.", schema_name))
+                .as_item()
+                .expect(&format!("The schema {} was used in a reference, but that schema is itself a reference to another schema.", schema_name));
+            let prop_schema = schema
+                .properties()
+                .expect(&format!("Tried to resolve reference {}, but {} is not an object with properties.", reference, schema_name))
+                .get(property)
+                .expect(&format!("Schema {} does not have property {}.", schema_name, property));
+            prop_schema.resolve(spec)
+        }
+    }
+}
+
 impl ReferenceOr<Schema> {
     pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> &'a Schema {
         match self {
             ReferenceOr::Reference { reference } => {
-                let reference = SchemaReference::from_str(&reference);
-                match &reference {
-                    SchemaReference::Schema { ref schema } => {
-                        let schema_ref = spec.schemas().get(schema)
-                            .expect(&format!("Schema {} not found in OpenAPI spec.", schema));
-                        // In theory both this as_item and the one below could have continue to be references
-                        // but assum
-                        schema_ref.as_item()
-                            .expect(&format!("The schema {} was used in a reference, but that schema is itself a reference to another schema.", schema))
-                    }
-                    SchemaReference::Property { schema: schema_name, property } => {
-                        let schema = spec.schemas().get(schema_name)
-                            .expect(&format!("Schema {} not found in OpenAPI spec.", schema_name))
-                            .as_item()
-                            .expect(&format!("The schema {} was used in a reference, but that schema is itself a reference to another schema.", schema_name));
-                        let prop_schema = schema
-                            .properties()
-                            .expect(&format!("Tried to resolve reference {}, but {} is not an object with properties.", reference, schema_name))
-                            .get(property)
-                            .expect(&format!("Schema {} does not have property {}.", schema_name, property));
-                        prop_schema.resolve(spec)
-                    }
-                }
+                resolve_helper(reference, spec, &mut HashSet::new())
             }
             ReferenceOr::Item(schema) => schema,
         }

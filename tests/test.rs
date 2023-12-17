@@ -331,3 +331,22 @@ fn global_security_removed_with_override() {
         panic!("Path not found")
     }
 }
+
+
+#[test]
+fn test_nested_refs_resolve() {
+    let s = include_str!("../fixtures/nested_refs.yaml");
+    let api: OpenAPI = serde_yaml::from_str(s).expect("Could not deserialize file");
+    let s: ReferenceOr<Schema> = ReferenceOr::schema_ref("UserId");
+    let t = s.resolve(&api);
+    assert!(matches!(t.schema_kind, SchemaKind::Type(Type::String(_))));
+}
+
+#[test]
+#[should_panic(expected = "Circular reference: #/components/schemas/UserId")]
+fn test_nested_refs_circular_panics() {
+    let s = include_str!("../fixtures/nested_refs_circular.yaml");
+    let api: OpenAPI = serde_yaml::from_str(s).expect("Could not deserialize file");
+    let s: ReferenceOr<Schema> = ReferenceOr::schema_ref("UserId");
+    s.resolve(&api);
+}
