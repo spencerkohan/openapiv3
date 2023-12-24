@@ -11,7 +11,7 @@ pub struct Responses {
     /// undeclared responses. A Reference Object can link to a response
     /// that the OpenAPI Object's components/responses section defines.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub default: Option<ReferenceOr<Response>>,
+    pub default: Option<RefOr<Response>>,
     /// Any HTTP status code can be used as the property name,
     /// but only one property per code, to describe the expected
     /// response for that HTTP status code. A Reference Object
@@ -26,7 +26,7 @@ pub struct Responses {
     /// explicit code definition takes precedence over the range
     /// definition for that code.
     #[serde(flatten, deserialize_with = "deserialize_responses")]
-    pub responses: IndexMap<StatusCode, ReferenceOr<Response>>,
+    pub responses: IndexMap<StatusCode, RefOr<Response>>,
     /// Inline extensions to this object.
     #[serde(flatten, deserialize_with = "crate::util::deserialize_extensions")]
     pub extensions: IndexMap<String, serde_json::Value>,
@@ -43,7 +43,7 @@ pub struct Response {
     /// If a response header is defined with the name "Content-Type",
     /// it SHALL be ignored.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub headers: IndexMap<String, ReferenceOr<Header>>,
+    pub headers: IndexMap<String, RefOr<Header>>,
 
     /// A map containing descriptions of potential response payloads.
     /// The key is a media type or media type range and the value
@@ -57,7 +57,7 @@ pub struct Response {
     /// The key of the map is a short name for the link, following
     /// the naming constraints of the names for Component Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub links: IndexMap<String, ReferenceOr<Link>>,
+    pub links: IndexMap<String, RefOr<Link>>,
 
     /// Inline extensions to this object.
     #[serde(flatten, deserialize_with = "crate::util::deserialize_extensions")]
@@ -66,7 +66,7 @@ pub struct Response {
 
 fn deserialize_responses<'de, D>(
     deserializer: D,
-) -> Result<IndexMap<StatusCode, ReferenceOr<Response>>, D::Error>
+) -> Result<IndexMap<StatusCode, RefOr<Response>>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -79,7 +79,7 @@ where
 mod tests {
     use serde_json::json;
 
-    use crate::{ReferenceOr, Response, Responses, StatusCode};
+    use crate::{RefOr, Response, Responses, StatusCode};
 
     #[test]
     fn test_responses() {
@@ -96,7 +96,7 @@ mod tests {
 
         assert_eq!(
             responses.responses.get(&StatusCode::Code(404)),
-            Some(&ReferenceOr::Item(Response {
+            Some(&RefOr::Item(Response {
                 description: "xxx".to_string(),
                 ..Default::default()
             }))

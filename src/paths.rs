@@ -48,7 +48,7 @@ pub struct PathItem {
     /// are defined at the OpenAPI Object's components/parameters.
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub parameters: Vec<ReferenceOr<Parameter>>,
+    pub parameters: Vec<RefOr<Parameter>>,
     /// Inline extensions to this object.
     #[serde(flatten, deserialize_with = "crate::util::deserialize_extensions")]
     pub extensions: IndexMap<String, serde_json::Value>,
@@ -133,14 +133,14 @@ impl IntoIterator for PathItem {
 pub struct Paths {
     /// A map of PathItems or references to them.
     #[serde(flatten, deserialize_with = "deserialize_paths")]
-    pub paths: IndexMap<String, ReferenceOr<PathItem>>,
+    pub paths: IndexMap<String, RefOr<PathItem>>,
     /// Inline extensions to this object.
     #[serde(flatten, deserialize_with = "crate::util::deserialize_extensions")]
     pub extensions: IndexMap<String, serde_json::Value>,
 }
 
 impl std::ops::Deref for Paths {
-    type Target = IndexMap<String, ReferenceOr<PathItem>>;
+    type Target = IndexMap<String, RefOr<PathItem>>;
 
     fn deref(&self) -> &Self::Target {
         &self.paths
@@ -154,8 +154,8 @@ impl std::ops::DerefMut for Paths {
 }
 
 impl Paths {
-    pub fn insert(&mut self, key: String, path_item: PathItem) -> Option<ReferenceOr<PathItem>> {
-        self.paths.insert(key, ReferenceOr::Item(path_item))
+    pub fn insert(&mut self, key: String, path_item: PathItem) -> Option<RefOr<PathItem>> {
+        self.paths.insert(key, RefOr::Item(path_item))
     }
 
     pub fn insert_operation(&mut self, path: String, method: Method, operation: Operation) -> Option<Operation> {
@@ -176,9 +176,9 @@ impl Paths {
 }
 
 impl IntoIterator for Paths {
-    type Item = (String, ReferenceOr<PathItem>);
+    type Item = (String, RefOr<PathItem>);
 
-    type IntoIter = indexmap::map::IntoIter<String, ReferenceOr<PathItem>>;
+    type IntoIter = indexmap::map::IntoIter<String, RefOr<PathItem>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.paths.into_iter()
@@ -187,7 +187,7 @@ impl IntoIterator for Paths {
 
 fn deserialize_paths<'de, D>(
     deserializer: D,
-) -> Result<IndexMap<String, ReferenceOr<PathItem>>, D::Error>
+) -> Result<IndexMap<String, RefOr<PathItem>>, D::Error>
     where
         D: Deserializer<'de>,
 {

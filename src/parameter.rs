@@ -39,7 +39,7 @@ pub struct ParameterData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub example: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub examples: IndexMap<String, ReferenceOr<Example>>,
+    pub examples: IndexMap<String, RefOr<Example>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub explode: Option<bool>,
     /// Inline extensions to this object.
@@ -50,7 +50,7 @@ pub struct ParameterData {
 
 impl ParameterData {
     /// Returns the parameter schema if it exists.
-    pub fn schema(&self) -> Option<&ReferenceOr<Schema>> {
+    pub fn schema(&self) -> Option<&RefOr<Schema>> {
         match self.format {
             ParameterSchemaOrContent::Schema(ref schema) => Some(schema),
             ParameterSchemaOrContent::Content(_) => None
@@ -63,7 +63,7 @@ impl ParameterData {
 #[serde(rename_all = "camelCase")]
 pub enum ParameterSchemaOrContent {
     /// The schema defining the type used for the parameter.
-    Schema(ReferenceOr<Schema>),
+    Schema(RefOr<Schema>),
     /// A map containing the representations for the parameter. The key is the
     /// media type and the value describes it. The map MUST only contain one
     /// entry.
@@ -146,7 +146,7 @@ pub enum ParameterKind {
 }
 
 impl Parameter {
-    pub fn new_kind(name: String, schema: ReferenceOr<Schema>,  kind: ParameterKind) -> Self {
+    pub fn new_kind(name: String, schema: RefOr<Schema>, kind: ParameterKind) -> Self {
         Parameter {
             data: ParameterData {
                 name,
@@ -163,16 +163,16 @@ impl Parameter {
         }
     }
 
-    pub fn query(name: String, schema: ReferenceOr<Schema>) -> Self {
-        Self::new_kind(name, schema, ParameterKind::Query {
+    pub fn query(name: impl Into<String>, schema: RefOr<Schema>) -> Self {
+        Self::new_kind(name.into(), schema, ParameterKind::Query {
             allow_reserved: false,
             style: QueryStyle::Form,
             allow_empty_value: None,
         })
     }
 
-    pub fn path(name: String, schema: ReferenceOr<Schema>) -> Self {
-        Self::new_kind(name, schema, ParameterKind::Path {
+    pub fn path(name: impl Into<String>, schema: RefOr<Schema>) -> Self {
+        Self::new_kind(name.into(), schema, ParameterKind::Path {
             style: PathStyle::Simple,
         })
     }

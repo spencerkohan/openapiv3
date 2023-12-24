@@ -39,14 +39,14 @@ impl Into<v3::OpenAPI> for v2::OpenAPI {
         components.schemas = definitions
             .unwrap_or_default()
             .into_iter()
-            .map(|(k, v)| (k, v3::ReferenceOr::Item(v.into())))
+            .map(|(k, v)| (k, v3::RefOr::Item(v.into())))
             .collect();
 
         components.parameters = parameters
             .unwrap_or_default()
             .into_iter()
             .filter_map(|(k, v)| {
-                let v: v3::ReferenceOr<v3::Parameter> = v.try_into().ok()?;
+                let v: v3::RefOr<v3::Parameter> = v.try_into().ok()?;
                 Some((k, v))
             })
             .collect();
@@ -105,8 +105,8 @@ impl Into<v3::Paths> for IndexMap<String, v2::PathItem> {
     }
 }
 
-impl Into<v3::ReferenceOr<v3::PathItem>> for v2::PathItem {
-    fn into(self) -> v3::ReferenceOr<v3::PathItem> {
+impl Into<v3::RefOr<v3::PathItem>> for v2::PathItem {
+    fn into(self) -> v3::RefOr<v3::PathItem> {
         let v2::PathItem {
             get,
             put,
@@ -117,7 +117,7 @@ impl Into<v3::ReferenceOr<v3::PathItem>> for v2::PathItem {
             patch,
             parameters,
         } = self;
-        v3::ReferenceOr::Item(v3::PathItem {
+        v3::RefOr::Item(v3::PathItem {
             summary: None,
             description: None,
             get: get.map(|op| op.into()),
@@ -231,7 +231,7 @@ impl Into<v3::Schema> for v2::Schema {
                 a.items = Some({
                     let item = items.unwrap();
                     let item = *item;
-                    let item: v3::ReferenceOr<v3::Schema> = item.into();
+                    let item: v3::RefOr<v3::Schema> = item.into();
                     item.boxed()
                 });
             }
@@ -245,10 +245,10 @@ impl Into<v3::Schema> for v2::Schema {
     }
 }
 
-impl TryInto<v3::ReferenceOr<v3::Parameter>> for v2::Parameter {
+impl TryInto<v3::RefOr<v3::Parameter>> for v2::Parameter {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<v3::ReferenceOr<v3::Parameter>, Self::Error> {
+    fn try_into(self) -> Result<v3::RefOr<v3::Parameter>, Self::Error> {
         if !self.valid_v3_location() {
             return Err(anyhow::anyhow!("Invalid location: {}", serde_json::to_string(&self.location).unwrap()));
         }
@@ -273,7 +273,7 @@ impl TryInto<v3::ReferenceOr<v3::Parameter>> for v2::Parameter {
         match &mut kind {
             v3::SchemaKind::Type(v3::Type::Array(ref mut a)) => {
                 a.items = items.map(|item| {
-                    let item: v3::ReferenceOr<v3::Schema> = item.into();
+                    let item: v3::RefOr<v3::Schema> = item.into();
                     item.boxed()
                 });
                 a.unique_items = unique_items.unwrap_or_default();
@@ -325,7 +325,7 @@ impl TryInto<v3::ReferenceOr<v3::Parameter>> for v2::Parameter {
             | v2::ParameterLocation::Body => panic!("Invalid location"),
         };
         let parameter = Parameter { data, kind };
-        Ok(v3::ReferenceOr::Item(parameter))
+        Ok(v3::RefOr::Item(parameter))
     }
 }
 
@@ -375,7 +375,7 @@ impl Into<v3::Operation> for v2::Operation {
                 .into_iter()
                 .flat_map(|p| p.try_into().ok())
                 .collect(),
-            request_body: Some(v3::ReferenceOr::Item(body)),
+            request_body: Some(v3::RefOr::Item(body)),
             responses,
             deprecated: false,
             security,
@@ -385,11 +385,11 @@ impl Into<v3::Operation> for v2::Operation {
     }
 }
 
-impl Into<v3::ReferenceOr<v3::Schema>> for v2::ReferenceOrSchema {
-    fn into(self) -> v3::ReferenceOr<v3::Schema> {
+impl Into<v3::RefOr<v3::Schema>> for v2::ReferenceOrSchema {
+    fn into(self) -> v3::RefOr<v3::Schema> {
         match self {
-            v2::ReferenceOrSchema::Item(s) => v3::ReferenceOr::Item(s.into()),
-            v2::ReferenceOrSchema::Reference { reference } => v3::ReferenceOr::Reference {
+            v2::ReferenceOrSchema::Item(s) => v3::RefOr::Item(s.into()),
+            v2::ReferenceOrSchema::Reference { reference } => v3::RefOr::Reference {
                 reference: rewrite_ref(&reference)
             }
         }
@@ -419,7 +419,7 @@ impl Into<v3::RequestBody> for Vec<v2::Parameter> {
             }
             let schema = match schema {
                 Some(s) => s.into(),
-                None => v3::ReferenceOr::Item(v3::Schema::new_any()),
+                None => v3::RefOr::Item(v3::Schema::new_any()),
             };
             object.properties.insert(name, schema);
         }
@@ -428,7 +428,7 @@ impl Into<v3::RequestBody> for Vec<v2::Parameter> {
         content.insert(
             "application/json".to_string(),
             v3::MediaType {
-                schema: Some(v3::ReferenceOr::Item(v3::Schema {
+                schema: Some(v3::RefOr::Item(v3::Schema {
                     data: v3::SchemaData::default(),
                     kind: v3::SchemaKind::Type(v3::Type::Object(object)),
                 })),
@@ -528,22 +528,22 @@ impl Into<v3::License> for v2::License {
     }
 }
 
-impl Into<v3::ReferenceOr<v3::SecurityScheme>> for v2::Security {
-    fn into(self) -> v3::ReferenceOr<v3::SecurityScheme> {
+impl Into<v3::RefOr<v3::SecurityScheme>> for v2::Security {
+    fn into(self) -> v3::RefOr<v3::SecurityScheme> {
         match self {
             v2::Security::ApiKey { name, location, description } => {
                 let location = match location {
                     v2::ApiKeyLocation::Query => v3::APIKeyLocation::Query,
                     v2::ApiKeyLocation::Header => v3::APIKeyLocation::Header,
                 };
-                v3::ReferenceOr::Item(v3::SecurityScheme::APIKey {
+                v3::RefOr::Item(v3::SecurityScheme::APIKey {
                     location,
                     name,
                     description,
                 })
             }
             v2::Security::Basic { description } => {
-                v3::ReferenceOr::Item(v3::SecurityScheme::HTTP {
+                v3::RefOr::Item(v3::SecurityScheme::HTTP {
                     scheme: "basic".to_string(),
                     bearer_format: None,
                     description,
@@ -591,7 +591,7 @@ impl Into<v3::ReferenceOr<v3::SecurityScheme>> for v2::Security {
                     client_credentials,
                     authorization_code,
                 };
-                v3::ReferenceOr::Item(v3::SecurityScheme::OAuth2 {
+                v3::RefOr::Item(v3::SecurityScheme::OAuth2 {
                     flows,
                     description,
                 })
@@ -600,19 +600,19 @@ impl Into<v3::ReferenceOr<v3::SecurityScheme>> for v2::Security {
     }
 }
 
-impl Into<v3::ReferenceOr<v3::Response>> for v2::Response {
-    fn into(self) -> v3::ReferenceOr<v3::Response> {
+impl Into<v3::RefOr<v3::Response>> for v2::Response {
+    fn into(self) -> v3::RefOr<v3::Response> {
         let v2::Response {
             description,
             schema,
         } = self;
         let Some(schema) = schema else {
-            return v3::ReferenceOr::Item(v3::Response {
+            return v3::RefOr::Item(v3::Response {
                 description,
                 ..v3::Response::default()
             });
         };
-        v3::ReferenceOr::Item(v3::Response {
+        v3::RefOr::Item(v3::Response {
             description,
             content: {
                 let mut map = IndexMap::new();

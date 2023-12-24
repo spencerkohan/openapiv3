@@ -1,7 +1,7 @@
 use crate::*;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use crate::map::RefOrItemMap;
+use crate::map::RefOrMap;
 
 /// Holds a set of reusable objects for different aspects of the OAS.
 /// All objects defined within the components object will have no effect
@@ -12,31 +12,31 @@ use crate::map::RefOrItemMap;
 pub struct Components {
     /// An object to hold reusable Security Scheme Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub security_schemes: RefOrItemMap<SecurityScheme>,
+    pub security_schemes: RefOrMap<SecurityScheme>,
     /// An object to hold reusable Response Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub responses: RefOrItemMap<Response>,
+    pub responses: RefOrMap<Response>,
     /// An object to hold reusable Parameter Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub parameters: RefOrItemMap<Parameter>,
+    pub parameters: RefOrMap<Parameter>,
     /// An object to hold reusable Example Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub examples: RefOrItemMap<Example>,
+    pub examples: RefOrMap<Example>,
     /// An object to hold reusable Request Body Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub request_bodies: RefOrItemMap<RequestBody>,
+    pub request_bodies: RefOrMap<RequestBody>,
     /// An object to hold reusable Header Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub headers: RefOrItemMap<Header>,
+    pub headers: RefOrMap<Header>,
     /// An object to hold reusable Schema Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub schemas: RefOrItemMap<Schema>,
+    pub schemas: RefOrMap<Schema>,
     /// An object to hold reusable Link Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub links: RefOrItemMap<Link>,
+    pub links: RefOrMap<Link>,
     /// An object to hold reusable Callback Objects.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub callbacks: RefOrItemMap<Callback>,
+    pub callbacks: RefOrMap<Callback>,
     /// Inline extensions to this object.
     #[serde(flatten, deserialize_with = "crate::util::deserialize_extensions")]
     pub extensions: IndexMap<String, serde_json::Value>,

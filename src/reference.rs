@@ -48,9 +48,12 @@ impl std::fmt::Display for SchemaReference {
 }
 
 
+/// Exists for backwards compatibility.
+pub type ReferenceOr<T> = RefOr<T>;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
-pub enum ReferenceOr<T> {
+pub enum RefOr<T> {
     Reference {
         #[serde(rename = "$ref")]
         reference: String,
@@ -58,77 +61,77 @@ pub enum ReferenceOr<T> {
     Item(T),
 }
 
-impl<T> ReferenceOr<T> {
+impl<T> RefOr<T> {
     pub fn ref_(r: &str) -> Self {
-        ReferenceOr::Reference {
+        RefOr::Reference {
             reference: r.to_owned(),
         }
     }
     pub fn schema_ref(r: &str) -> Self {
-        ReferenceOr::Reference {
+        RefOr::Reference {
             reference: format!("#/components/schemas/{}", r),
         }
     }
 
-    pub fn boxed(self) -> Box<ReferenceOr<T>> {
+    pub fn boxed(self) -> Box<RefOr<T>> {
         Box::new(self)
     }
 
-    /// Converts this [ReferenceOr] to the item inside, if it exists.
+    /// Converts this [RefOr] to the item inside, if it exists.
     ///
-    /// The return value will be [Option::Some] if this was a [ReferenceOr::Item] or [Option::None] if this was a [ReferenceOr::Reference].
+    /// The return value will be [Option::Some] if this was a [RefOr::Item] or [Option::None] if this was a [RefOr::Reference].
     ///
     /// # Examples
     ///
     /// ```
-    /// # use openapiv3::ReferenceOr;
+    /// # use openapiv3::RefOr;
     ///
-    /// let i = ReferenceOr::Item(1);
+    /// let i = RefOr::Item(1);
     /// assert_eq!(i.into_item(), Some(1));
     ///
-    /// let j: ReferenceOr<u8> = ReferenceOr::Reference { reference: String::new() };
+    /// let j: RefOr<u8> = RefOr::Reference { reference: String::new() };
     /// assert_eq!(j.into_item(), None);
     /// ```
     pub fn into_item(self) -> Option<T> {
         match self {
-            ReferenceOr::Reference { .. } => None,
-            ReferenceOr::Item(i) => Some(i),
+            RefOr::Reference { .. } => None,
+            RefOr::Item(i) => Some(i),
         }
     }
 
-    /// Returns a reference to to the item inside this [ReferenceOr], if it exists.
+    /// Returns a reference to to the item inside this [RefOr], if it exists.
     ///
-    /// The return value will be [Option::Some] if this was a [ReferenceOr::Item] or [Option::None] if this was a [ReferenceOr::Reference].
+    /// The return value will be [Option::Some] if this was a [RefOr::Item] or [Option::None] if this was a [RefOr::Reference].
     ///
     /// # Examples
     ///
     /// ```
-    /// # use openapiv3::ReferenceOr;
+    /// # use openapiv3::RefOr;
     ///
-    /// let i = ReferenceOr::Item(1);
+    /// let i = RefOr::Item(1);
     /// assert_eq!(i.as_item(), Some(&1));
     ///
-    /// let j: ReferenceOr<u8> = ReferenceOr::Reference { reference: String::new() };
+    /// let j: RefOr<u8> = RefOr::Reference { reference: String::new() };
     /// assert_eq!(j.as_item(), None);
     /// ```
     pub fn as_item(&self) -> Option<&T> {
         match self {
-            ReferenceOr::Reference { .. } => None,
-            ReferenceOr::Item(i) => Some(i),
+            RefOr::Reference { .. } => None,
+            RefOr::Item(i) => Some(i),
         }
     }
 
     pub fn as_ref_str(&self) -> Option<&str> {
         match self {
-            ReferenceOr::Reference { reference } => Some(reference),
-            ReferenceOr::Item(_) => None,
+            RefOr::Reference { reference } => Some(reference),
+            RefOr::Item(_) => None,
         }
     }
 
     pub fn as_mut(&mut self) -> Option<&mut T> {
         match self {
-            ReferenceOr::Reference { .. } => None,
-            ReferenceOr::Item(i) => Some(i),
+            RefOr::Reference { .. } => None,
+            RefOr::Item(i) => Some(i),
         }
     }
 }
@@ -146,10 +149,10 @@ fn resolve_helper<'a>(reference: &str, spec: &'a OpenAPI, seen: &mut HashSet<Str
             // In theory both this as_item and the one below could have continue to be references
             // but assum
             match schema_ref {
-                ReferenceOr::Reference { reference } => {
+                RefOr::Reference { reference } => {
                     resolve_helper(&reference, spec, seen)
                 }
-                ReferenceOr::Item(s) => s
+                RefOr::Item(s) => s
             }
         }
         SchemaReference::Property { schema: schema_name, property } => {
@@ -167,72 +170,72 @@ fn resolve_helper<'a>(reference: &str, spec: &'a OpenAPI, seen: &mut HashSet<Str
     }
 }
 
-impl ReferenceOr<Schema> {
+impl RefOr<Schema> {
     pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> &'a Schema {
         match self {
-            ReferenceOr::Reference { reference } => {
+            RefOr::Reference { reference } => {
                 resolve_helper(reference, spec, &mut HashSet::new())
             }
-            ReferenceOr::Item(schema) => schema,
+            RefOr::Item(schema) => schema,
         }
     }
 }
 
-impl<T> From<T> for ReferenceOr<T> {
+impl<T> From<T> for RefOr<T> {
     fn from(item: T) -> Self {
-        ReferenceOr::Item(item)
+        RefOr::Item(item)
     }
 }
 
-impl ReferenceOr<Parameter> {
+impl RefOr<Parameter> {
     pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a Parameter> {
         match self {
-            ReferenceOr::Reference { reference } => {
+            RefOr::Reference { reference } => {
                 let name = get_parameter_name(&reference)?;
                 spec.parameters.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
                     .as_item()
                     .ok_or(anyhow!("{} is circular.", reference))
             }
-            ReferenceOr::Item(parameter) => Ok(parameter),
+            RefOr::Item(parameter) => Ok(parameter),
         }
     }
 }
 
 
-impl ReferenceOr<Response> {
+impl RefOr<Response> {
     pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a Response> {
         match self {
-            ReferenceOr::Reference { reference } => {
+            RefOr::Reference { reference } => {
                 let name = get_response_name(&reference)?;
                 spec.responses.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
                     .as_item()
                     .ok_or(anyhow!("{} is circular.", reference))
             }
-            ReferenceOr::Item(response) => Ok(response),
+            RefOr::Item(response) => Ok(response),
         }
     }
 }
 
-impl ReferenceOr<RequestBody> {
+impl RefOr<RequestBody> {
     pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a RequestBody> {
         match self {
-            ReferenceOr::Reference { reference } => {
+            RefOr::Reference { reference } => {
                 let name = get_request_body_name(&reference)?;
                 spec.request_bodies.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
                     .as_item()
                     .ok_or(anyhow!("{} is circular.", reference))
             }
-            ReferenceOr::Item(request_body) => Ok(request_body),
+            RefOr::Item(request_body) => Ok(request_body),
         }
     }
 }
 
-impl<T: Default> Default for ReferenceOr<T> {
+impl<T: Default> Default for RefOr<T> {
     fn default() -> Self {
-        ReferenceOr::Item(T::default())
+        RefOr::Item(T::default())
     }
 }
 

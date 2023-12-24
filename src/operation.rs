@@ -38,14 +38,14 @@ pub struct Operation {
     /// that are defined at the OpenAPI Object's components/parameters.
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub parameters: Vec<ReferenceOr<Parameter>>,
+    pub parameters: Vec<RefOr<Parameter>>,
     /// The request body applicable for this operation.
     /// The requestBody is only supported in HTTP methods
     /// where the HTTP 1.1 specification RFC7231 has explicitly
     /// defined semantics for request bodies. In other cases where
     /// the HTTP spec is vague, requestBody SHALL be ignored by consumers.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_body: Option<ReferenceOr<RequestBody>>,
+    pub request_body: Option<RefOr<RequestBody>>,
     /// REQUIRED. The list of possible responses as they are returned
     /// from executing this operation.
     pub responses: Responses,
@@ -72,8 +72,8 @@ pub struct Operation {
 }
 
 impl Operation {
-    pub fn add_response_success_json(&mut self, schema: Option<ReferenceOr<Schema>>) {
-        self.responses.responses.insert(StatusCode::Code(200), ReferenceOr::Item({
+    pub fn add_response_success_json(&mut self, schema: Option<RefOr<Schema>>) {
+        self.responses.responses.insert(StatusCode::Code(200), RefOr::Item({
             let mut content = indexmap::IndexMap::new();
             content.insert("application/json".to_string(), MediaType {
                 schema,
@@ -86,13 +86,13 @@ impl Operation {
         }));
     }
 
-    pub fn add_request_body_json(&mut self, schema: Option<ReferenceOr<Schema>>) {
+    pub fn add_request_body_json(&mut self, schema: Option<RefOr<Schema>>) {
         let mut content = indexmap::IndexMap::new();
         content.insert("application/json".to_string(), MediaType {
             schema,
             ..MediaType::default()
         });
-        self.request_body = Some(ReferenceOr::Item(RequestBody {
+        self.request_body = Some(RefOr::Item(RequestBody {
             content,
             required: true,
             ..RequestBody::default()
@@ -102,7 +102,7 @@ impl Operation {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Operation, ReferenceOr, Responses, Schema, StatusCode};
+    use crate::{Operation, RefOr, Responses, Schema, StatusCode};
     use indexmap::IndexMap;
     use serde_yaml::from_str;
 
@@ -114,7 +114,7 @@ mod tests {
                     default: None,
                     responses: {
                         let mut map = IndexMap::new();
-                        map.insert(StatusCode::Code(200), ReferenceOr::ref_("test"));
+                        map.insert(StatusCode::Code(200), RefOr::ref_("test"));
                         map
                     },
                     ..Default::default()
@@ -130,7 +130,7 @@ mod tests {
                     default: None,
                     responses: {
                         let mut map = IndexMap::new();
-                        map.insert(StatusCode::Code(666), ReferenceOr::ref_("demo"));
+                        map.insert(StatusCode::Code(666), RefOr::ref_("demo"));
                         map
                     },
                     ..Default::default()
@@ -143,11 +143,11 @@ mod tests {
         assert_eq!(
             Operation {
                 responses: Responses {
-                    default: Some(ReferenceOr::ref_("def")),
+                    default: Some(RefOr::ref_("def")),
                     responses: {
                         let mut map = IndexMap::new();
-                        map.insert(StatusCode::Code(666), ReferenceOr::ref_("demo"));
-                        map.insert(StatusCode::Code(418), ReferenceOr::ref_("demo"));
+                        map.insert(StatusCode::Code(666), RefOr::ref_("demo"));
+                        map.insert(StatusCode::Code(418), RefOr::ref_("demo"));
                         map
                     },
                     ..Default::default()
@@ -161,6 +161,6 @@ mod tests {
     #[test]
     fn test_basic() {
         let mut op = Operation::default();
-        op.add_request_body_json(Some(ReferenceOr::Item(Schema::new_string())));
+        op.add_request_body_json(Some(RefOr::Item(Schema::new_string())));
     }
 }

@@ -134,7 +134,7 @@ impl OpenAPI {
                     }
                 }
             } else {
-                self.paths.paths.insert(path, ReferenceOr::Item(item));
+                self.paths.paths.insert(path, RefOr::Item(item));
             }
         }
 

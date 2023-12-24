@@ -64,18 +64,18 @@ pub enum SchemaKind {
     Type(Type),
     OneOf {
         #[serde(rename = "oneOf")]
-        one_of: Vec<ReferenceOr<Schema>>,
+        one_of: Vec<RefOr<Schema>>,
     },
     AllOf {
         #[serde(rename = "allOf")]
-        all_of: Vec<ReferenceOr<Schema>>,
+        all_of: Vec<RefOr<Schema>>,
     },
     AnyOf {
         #[serde(rename = "anyOf")]
-        any_of: Vec<ReferenceOr<Schema>>,
+        any_of: Vec<RefOr<Schema>>,
     },
     Not {
-        not: Box<ReferenceOr<Schema>>,
+        not: Box<RefOr<Schema>>,
     },
     Any(AnySchema),
 }
@@ -115,7 +115,7 @@ impl Schema {
     }
 
     /// Create a Map<String, inner> schema
-    pub fn new_map(inner: impl Into<ReferenceOr<Schema>>) -> Self {
+    pub fn new_map(inner: impl Into<RefOr<Schema>>) -> Self {
         let inner = inner.into().boxed();
         Self::new_kind(SchemaKind::Type(Type::Object(ObjectType {
             additional_properties: Some(AdditionalProperties::Schema(inner)),
@@ -137,12 +137,20 @@ impl Schema {
     }
 
     /// Create a new array schema with items of the given type
-    pub fn new_array(inner: impl Into<ReferenceOr<Schema>>) -> Self {
+    pub fn new_array(inner: impl Into<RefOr<Schema>>) -> Self {
         let inner = inner.into().boxed();
         Self::new_kind(SchemaKind::Type(Type::Array(ArrayType {
             items: Some(inner),
             ..ArrayType::default()
         })))
+    }
+
+    pub fn new_one_of(one_of: Vec<RefOr<Schema>>) -> Self {
+        Self::new_kind(SchemaKind::OneOf { one_of })
+    }
+
+    pub fn new_all_of(all_of: Vec<RefOr<Schema>>) -> Self {
+        Self::new_kind(SchemaKind::AllOf { all_of })
     }
 
     /// Create an Any schema
@@ -153,7 +161,7 @@ impl Schema {
         }
     }
 
-    pub fn add_property(&mut self, s: &str, schema: impl Into<ReferenceOr<Schema>>) -> Result<()> {
+    pub fn add_property(&mut self, s: &str, schema: impl Into<RefOr<Schema>>) -> Result<()> {
         let p = self.properties_mut().ok_or_else(|| anyhow!("Schema is not an object"))?;
         p.insert(s.to_string(), schema.into());
         Ok(())
@@ -191,7 +199,7 @@ pub enum Type {
 #[serde(untagged)]
 pub enum AdditionalProperties {
     Any(bool),
-    Schema(Box<ReferenceOr<Schema>>),
+    Schema(Box<RefOr<Schema>>),
 }
 
 /// Catch-all for any combination of properties that doesn't correspond to one
@@ -214,7 +222,7 @@ pub struct AnySchema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum: Option<f64>,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub properties: IndexMap<String, ReferenceOr<Schema>>,
+    pub properties: IndexMap<String, RefOr<Schema>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -224,7 +232,7 @@ pub struct AnySchema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_properties: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub items: Option<Box<ReferenceOr<Schema>>>,
+    pub items: Option<Box<RefOr<Schema>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min_items: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -240,13 +248,13 @@ pub struct AnySchema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_length: Option<usize>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub one_of: Vec<ReferenceOr<Schema>>,
+    pub one_of: Vec<RefOr<Schema>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub all_of: Vec<ReferenceOr<Schema>>,
+    pub all_of: Vec<RefOr<Schema>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub any_of: Vec<ReferenceOr<Schema>>,
+    pub any_of: Vec<RefOr<Schema>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub not: Option<Box<ReferenceOr<Schema>>>,
+    pub not: Option<Box<RefOr<Schema>>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
@@ -306,7 +314,7 @@ pub struct IntegerType {
 #[serde(rename_all = "camelCase")]
 pub struct ObjectType {
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub properties: RefOrItemMap<Schema>,
+    pub properties: RefOrMap<Schema>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -321,7 +329,7 @@ pub struct ObjectType {
 #[serde(rename_all = "camelCase")]
 pub struct ArrayType {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub items: Option<Box<ReferenceOr<Schema>>>,
+    pub items: Option<Box<RefOr<Schema>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min_items: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -371,7 +379,7 @@ impl VariantOrUnknownOrEmpty<StringFormat> {
 
 
 impl Schema {
-    pub fn properties(&self) -> Option<&IndexMap<String, ReferenceOr<Schema>>> {
+    pub fn properties(&self) -> Option<&IndexMap<String, RefOr<Schema>>> {
         match &self.kind {
             SchemaKind::Type(Type::Object(o)) => Some(&o.properties),
             SchemaKind::Any(AnySchema { properties, .. }) => Some(properties),
@@ -379,7 +387,7 @@ impl Schema {
         }
     }
 
-    pub fn properties_iter<'a>(&'a self, spec: &'a OpenAPI) -> Result<Box<dyn Iterator<Item=(&'a String, &'a ReferenceOr<Schema>)> + 'a>> {
+    pub fn properties_iter<'a>(&'a self, spec: &'a OpenAPI) -> Result<Box<dyn Iterator<Item=(&'a String, &'a RefOr<Schema>)> + 'a>> {
         match &self.kind {
             SchemaKind::Type(Type::Object(o)) => Ok(Box::new(o.properties.iter())),
             SchemaKind::Any(AnySchema { properties, .. }) => Ok(Box::new(properties.iter())),
@@ -395,7 +403,7 @@ impl Schema {
         }
     }
 
-    pub fn properties_mut(&mut self) -> Option<&mut IndexMap<String, ReferenceOr<Schema>>> {
+    pub fn properties_mut(&mut self) -> Option<&mut IndexMap<String, RefOr<Schema>>> {
         match &mut self.kind {
             SchemaKind::Type(Type::Object(ref mut o)) => Some(&mut o.properties),
             SchemaKind::Any(AnySchema { ref mut properties, .. }) => Some(properties),

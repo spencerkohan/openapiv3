@@ -131,7 +131,7 @@ macro_rules! map {
         #[allow(unused_mut)]
         let mut m = IndexMap::new();
         $(m.insert($key, $value);)*
-        $crate::RefOrItemMap::new(m)
+        $crate::RefOrMap::new(m)
     }};
 }
 
@@ -161,18 +161,18 @@ fn petstore_discriminated() {
         }],
         components: Components {
             schemas: map! {
-                "Cat".to_owned() => ReferenceOr::Item(Schema {
+                "Cat".to_owned() => RefOr::Item(Schema {
                     data: SchemaData {
                         description: Some("A representation of a cat".to_owned()),
                         ..Default::default()
                     },
                     kind: SchemaKind::AllOf { all_of: vec![
-                        ReferenceOr::ref_("#/components/schemas/Pet"),
-                        ReferenceOr::Item(Schema {
+                        RefOr::ref_("#/components/schemas/Pet"),
+                        RefOr::Item(Schema {
                             data: Default::default(),
                             kind: SchemaKind::Type(Type::Object(ObjectType {
                                 properties: map!{
-                                    "huntingSkill".to_owned() => ReferenceOr::Item(Schema {
+                                    "huntingSkill".to_owned() => RefOr::Item(Schema {
                                         data: SchemaData {
                                             description: Some("The measured skill for hunting".to_owned()),
                                             ..Default::default()
@@ -195,18 +195,18 @@ fn petstore_discriminated() {
                     ]},
                 }),
 
-                "Dog".to_owned() => ReferenceOr::Item(Schema {
+                "Dog".to_owned() => RefOr::Item(Schema {
                     data: SchemaData {
                         description: Some("A representation of a dog".to_owned()),
                         ..Default::default()
                     },
                     kind: SchemaKind::AllOf { all_of: vec![
-                        ReferenceOr::ref_("#/components/schemas/Pet"),
-                        ReferenceOr::Item(Schema {
+                        RefOr::ref_("#/components/schemas/Pet"),
+                        RefOr::Item(Schema {
                             data: Default::default(),
                             kind: SchemaKind::Type(Type::Object(ObjectType {
                                 properties: map!{
-                                    "packSize".to_owned() => ReferenceOr::Item(Schema {
+                                    "packSize".to_owned() => RefOr::Item(Schema {
                                         data: SchemaData {
                                             description: Some("the size of the pack the dog is from".to_owned()),
                                             ..Default::default()
@@ -225,7 +225,7 @@ fn petstore_discriminated() {
                     ]},
                 }),
 
-                "Pet".to_owned() => ReferenceOr::Item(Schema {
+                "Pet".to_owned() => RefOr::Item(Schema {
                     data: SchemaData {
                         discriminator: Some(Discriminator {
                             property_name: "petType".to_owned(),
@@ -235,11 +235,11 @@ fn petstore_discriminated() {
                     },
                     kind: SchemaKind::Type(Type::Object(ObjectType {
                         properties: map!{
-                            "name".to_owned() => ReferenceOr::Item(Schema {
+                            "name".to_owned() => RefOr::Item(Schema {
                                 data: Default::default(),
                                 kind: SchemaKind::Type(Type::String(Default::default())),
                             }),
-                            "petType".to_owned() => ReferenceOr::Item(Schema {
+                            "petType".to_owned() => RefOr::Item(Schema {
                                 data: Default::default(),
                                 kind: SchemaKind::Type(Type::String(Default::default())),
                             }),
@@ -268,8 +268,8 @@ fn test_operation_extension_docs() {
         .paths
         .iter()
         .filter_map(|(_, i)| match i {
-            ReferenceOr::Reference { .. } => None,
-            ReferenceOr::Item(item) => Some(item),
+            RefOr::Reference { .. } => None,
+            RefOr::Item(item) => Some(item),
         })
         .flat_map(|item| item.iter())
         .flat_map(|(_, o)| o.extensions.iter().filter(|e| !e.0.starts_with("x-")))
@@ -293,7 +293,7 @@ fn global_security_removed_with_override() {
 
     // Security is overridden on one path. This path opts out of global security.
     let path_with_security_override = "/libs/granite/core/content/login.html";
-    if let ReferenceOr::Item(path_item) = openapi
+    if let RefOr::Item(path_item) = openapi
         .paths
         .paths
         .get(path_with_security_override)
@@ -320,7 +320,7 @@ fn global_security_removed_with_override() {
 
     // Security is NOT overridden on other paths. Callers must uses global security.
     let path_no_security_override = "/libs/granite/security/truststore.json";
-    if let ReferenceOr::Item(path_item) =
+    if let RefOr::Item(path_item) =
         openapi.paths.paths.get(path_no_security_override).unwrap()
     {
         assert!(
@@ -337,7 +337,7 @@ fn global_security_removed_with_override() {
 fn test_nested_refs_resolve() {
     let s = include_str!("../fixtures/nested_refs.yaml");
     let api: OpenAPI = serde_yaml::from_str(s).expect("Could not deserialize file");
-    let s: ReferenceOr<Schema> = ReferenceOr::schema_ref("UserId");
+    let s: RefOr<Schema> = RefOr::schema_ref("UserId");
     let t = s.resolve(&api);
     assert!(matches!(t.kind, SchemaKind::Type(Type::String(_))));
 }
@@ -347,6 +347,6 @@ fn test_nested_refs_resolve() {
 fn test_nested_refs_circular_panics() {
     let s = include_str!("../fixtures/nested_refs_circular.yaml");
     let api: OpenAPI = serde_yaml::from_str(s).expect("Could not deserialize file");
-    let s: ReferenceOr<Schema> = ReferenceOr::schema_ref("UserId");
+    let s: RefOr<Schema> = RefOr::schema_ref("UserId");
     s.resolve(&api);
 }
