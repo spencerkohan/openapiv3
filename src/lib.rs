@@ -31,6 +31,7 @@ mod variant_or;
 #[cfg_attr(docsrs, doc(cfg(feature = "v2")))]
 pub mod v2;
 mod versioned;
+mod map;
 
 pub use self::callback::*;
 pub use self::components::*;
@@ -60,5 +61,10 @@ pub use self::status_code::*;
 pub use self::tag::*;
 pub use self::util::*;
 pub use self::variant_or::*;
+pub use map::*;
 pub use http::method::Method as PathMethod;
 pub use versioned::*;
+
+fn default<T: Default>() -> T {
+    T::default()
+}

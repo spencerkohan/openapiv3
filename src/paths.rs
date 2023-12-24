@@ -139,17 +139,21 @@ pub struct Paths {
     pub extensions: IndexMap<String, serde_json::Value>,
 }
 
+impl std::ops::Deref for Paths {
+    type Target = IndexMap<String, ReferenceOr<PathItem>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.paths
+    }
+}
+
+impl std::ops::DerefMut for Paths {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.paths
+    }
+}
 
 impl Paths {
-    /// Iterate over path items.
-    pub fn iter(&self) -> indexmap::map::Iter<String, ReferenceOr<PathItem>> {
-        self.paths.iter()
-    }
-
-    pub fn iter_mut(&mut self) -> indexmap::map::IterMut<String, ReferenceOr<PathItem>> {
-        self.paths.iter_mut()
-    }
-
     pub fn insert(&mut self, key: String, path_item: PathItem) -> Option<ReferenceOr<PathItem>> {
         self.paths.insert(key, ReferenceOr::Item(path_item))
     }

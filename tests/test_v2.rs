@@ -15,9 +15,9 @@ fn load_swagger_20_and_upgrade() {
     assert!(v2.definitions.as_ref().unwrap().contains_key("Pet"));
     assert!(v2.definitions.as_ref().unwrap().contains_key("NewPet"));
     assert!(v2.definitions.as_ref().unwrap().contains_key("Error"));
-    assert!(v3.schemas().contains_key("Pet"));
-    assert!(v3.schemas().contains_key("NewPet"));
-    assert!(v3.schemas().contains_key("Error"));
+    assert!(v3.schemas.contains_key("Pet"));
+    assert!(v3.schemas.contains_key("NewPet"));
+    assert!(v3.schemas.contains_key("Error"));
 
     // paths
     assert!(v2.paths.contains_key("/pets"));

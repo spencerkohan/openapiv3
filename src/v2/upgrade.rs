@@ -82,8 +82,8 @@ impl Into<v3::OpenAPI> for v2::OpenAPI {
                     }]
                 }).unwrap_or_default(),
             paths: paths.into(),
-            components: Some(components),
-            security,
+            components,
+            security: security.unwrap_or_default(),
             tags: tags.unwrap_or_default()
                 .into_iter()
                 .map(|t| t.into())
@@ -201,8 +201,8 @@ impl Into<v3::Schema> for v2::Schema {
 
         if let Some(all_of) = all_of {
             return v3::Schema {
-                schema_data,
-                schema_kind: v3::SchemaKind::AllOf {
+                data: schema_data,
+                kind: v3::SchemaKind::AllOf {
                     all_of: all_of
                         .into_iter()
                         .map(|s| s.into())
@@ -239,8 +239,8 @@ impl Into<v3::Schema> for v2::Schema {
         }
 
         v3::Schema {
-            schema_data,
-            schema_kind,
+            data: schema_data,
+            kind: schema_kind,
         }
     }
 }
@@ -297,8 +297,8 @@ impl TryInto<v3::ReferenceOr<v3::Parameter>> for v2::Parameter {
             required: required.unwrap_or_default(),
             deprecated: None,
             format: v3::ParameterSchemaOrContent::Schema(v3::ReferenceOr::Item(v3::Schema {
-                schema_data,
-                schema_kind,
+                data: schema_data,
+                kind: schema_kind,
             })),
             example: None,
             examples: Default::default(),
@@ -432,8 +432,8 @@ impl Into<v3::RequestBody> for Vec<v2::Parameter> {
             "application/json".to_string(),
             v3::MediaType {
                 schema: Some(v3::ReferenceOr::Item(v3::Schema {
-                    schema_data: v3::SchemaData::default(),
-                    schema_kind: v3::SchemaKind::Type(v3::Type::Object(object)),
+                    data: v3::SchemaData::default(),
+                    kind: v3::SchemaKind::Type(v3::Type::Object(object)),
                 })),
                 ..v3::MediaType::default()
             },

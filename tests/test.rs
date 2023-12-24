@@ -131,7 +131,7 @@ macro_rules! map {
         #[allow(unused_mut)]
         let mut m = IndexMap::new();
         $(m.insert($key, $value);)*
-        m
+        $crate::RefOrItemMap::new(m)
     }};
 }
 
@@ -159,25 +159,25 @@ fn petstore_discriminated() {
             url: "http://petstore.swagger.io/v1".to_owned(),
             ..Default::default()
         }],
-        components: Some(Components {
+        components: Components {
             schemas: map! {
                 "Cat".to_owned() => ReferenceOr::Item(Schema {
-                    schema_data: SchemaData {
+                    data: SchemaData {
                         description: Some("A representation of a cat".to_owned()),
                         ..Default::default()
                     },
-                    schema_kind: SchemaKind::AllOf { all_of: vec![
+                    kind: SchemaKind::AllOf { all_of: vec![
                         ReferenceOr::ref_("#/components/schemas/Pet"),
                         ReferenceOr::Item(Schema {
-                            schema_data: Default::default(),
-                            schema_kind: SchemaKind::Type(Type::Object(ObjectType {
+                            data: Default::default(),
+                            kind: SchemaKind::Type(Type::Object(ObjectType {
                                 properties: map!{
                                     "huntingSkill".to_owned() => ReferenceOr::Item(Schema {
-                                        schema_data: SchemaData {
+                                        data: SchemaData {
                                             description: Some("The measured skill for hunting".to_owned()),
                                             ..Default::default()
                                         },
-                                        schema_kind: SchemaKind::Type(Type::String(StringType {
+                                        kind: SchemaKind::Type(Type::String(StringType {
                                             enumeration: vec![
                                                 "clueless".to_owned(),
                                                 "lazy".to_owned(),
@@ -196,22 +196,22 @@ fn petstore_discriminated() {
                 }),
 
                 "Dog".to_owned() => ReferenceOr::Item(Schema {
-                    schema_data: SchemaData {
+                    data: SchemaData {
                         description: Some("A representation of a dog".to_owned()),
                         ..Default::default()
                     },
-                    schema_kind: SchemaKind::AllOf { all_of: vec![
+                    kind: SchemaKind::AllOf { all_of: vec![
                         ReferenceOr::ref_("#/components/schemas/Pet"),
                         ReferenceOr::Item(Schema {
-                            schema_data: Default::default(),
-                            schema_kind: SchemaKind::Type(Type::Object(ObjectType {
+                            data: Default::default(),
+                            kind: SchemaKind::Type(Type::Object(ObjectType {
                                 properties: map!{
                                     "packSize".to_owned() => ReferenceOr::Item(Schema {
-                                        schema_data: SchemaData {
+                                        data: SchemaData {
                                             description: Some("the size of the pack the dog is from".to_owned()),
                                             ..Default::default()
                                         },
-                                        schema_kind: SchemaKind::Type(Type::Integer(IntegerType {
+                                        kind: SchemaKind::Type(Type::Integer(IntegerType {
                                             format: VariantOrUnknownOrEmpty::Item(IntegerFormat::Int32),
                                             minimum: Some(0),
                                             ..Default::default()
@@ -226,22 +226,22 @@ fn petstore_discriminated() {
                 }),
 
                 "Pet".to_owned() => ReferenceOr::Item(Schema {
-                    schema_data: SchemaData {
+                    data: SchemaData {
                         discriminator: Some(Discriminator {
                             property_name: "petType".to_owned(),
                             ..Default::default()
                         }),
                         ..Default::default()
                     },
-                    schema_kind: SchemaKind::Type(Type::Object(ObjectType {
+                    kind: SchemaKind::Type(Type::Object(ObjectType {
                         properties: map!{
                             "name".to_owned() => ReferenceOr::Item(Schema {
-                                schema_data: Default::default(),
-                                schema_kind: SchemaKind::Type(Type::String(Default::default())),
+                                data: Default::default(),
+                                kind: SchemaKind::Type(Type::String(Default::default())),
                             }),
                             "petType".to_owned() => ReferenceOr::Item(Schema {
-                                schema_data: Default::default(),
-                                schema_kind: SchemaKind::Type(Type::String(Default::default())),
+                                data: Default::default(),
+                                kind: SchemaKind::Type(Type::String(Default::default())),
                             }),
                         },
                         required: vec!["name".to_owned(), "petType".to_owned()],
@@ -250,7 +250,7 @@ fn petstore_discriminated() {
                 }),
             },
             ..Default::default()
-        }),
+        },
         ..Default::default()
     };
     let yaml = include_str!("../fixtures/petstore-discriminated.yaml");
@@ -289,7 +289,7 @@ fn global_security_removed_with_override() {
         .expect(&format!("Could not deserialize adobe_aem.yaml"));
 
     // Global security is set
-    assert!(openapi.security.is_some());
+    assert!(!openapi.security.is_empty());
 
     // Security is overridden on one path. This path opts out of global security.
     let path_with_security_override = "/libs/granite/core/content/login.html";
@@ -339,7 +339,7 @@ fn test_nested_refs_resolve() {
     let api: OpenAPI = serde_yaml::from_str(s).expect("Could not deserialize file");
     let s: ReferenceOr<Schema> = ReferenceOr::schema_ref("UserId");
     let t = s.resolve(&api);
-    assert!(matches!(t.schema_kind, SchemaKind::Type(Type::String(_))));
+    assert!(matches!(t.kind, SchemaKind::Type(Type::String(_))));
 }
 
 #[test]

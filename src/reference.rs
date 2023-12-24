@@ -148,19 +148,19 @@ fn resolve_helper<'a>(reference: &str, spec: &'a OpenAPI, seen: &mut HashSet<Str
     let reference = SchemaReference::from_str(&reference);
     match &reference {
         SchemaReference::Schema { ref schema } => {
-            let schema_ref = spec.schemas().get(schema)
+            let schema_ref = spec.schemas.get(schema)
                 .expect(&format!("Schema {} not found in OpenAPI spec.", schema));
             // In theory both this as_item and the one below could have continue to be references
             // but assum
             match schema_ref {
                 ReferenceOr::Reference { reference } => {
-                    resolve_helper(reference, spec, seen)
+                    resolve_helper(&reference, spec, seen)
                 }
                 ReferenceOr::Item(s) => s
             }
         }
         SchemaReference::Property { schema: schema_name, property } => {
-            let schema = spec.schemas().get(schema_name)
+            let schema = spec.schemas.get(schema_name)
                 .expect(&format!("Schema {} not found in OpenAPI spec.", schema_name))
                 .as_item()
                 .expect(&format!("The schema {} was used in a reference, but that schema is itself a reference to another schema.", schema_name));
@@ -206,8 +206,7 @@ impl ReferenceOr<Parameter> {
         match self {
             ReferenceOr::Reference { reference } => {
                 let name = get_parameter_name(&reference)?;
-                let components = spec.components.as_ref().unwrap();
-                components.parameters.get(name)
+                spec.parameters.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
                     .as_item()
                     .ok_or(anyhow!("{} is circular.", reference))
@@ -223,8 +222,7 @@ impl ReferenceOr<Response> {
         match self {
             ReferenceOr::Reference { reference } => {
                 let name = get_response_name(&reference)?;
-                let components = spec.components.as_ref().unwrap();
-                components.responses.get(name)
+                spec.responses.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
                     .as_item()
                     .ok_or(anyhow!("{} is circular.", reference))
@@ -239,8 +237,7 @@ impl ReferenceOr<RequestBody> {
         match self {
             ReferenceOr::Reference { reference } => {
                 let name = get_request_body_name(&reference)?;
-                let components = spec.components.as_ref().unwrap();
-                components.request_bodies.get(name)
+                spec.request_bodies.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
                     .as_item()
                     .ok_or(anyhow!("{} is circular.", reference))

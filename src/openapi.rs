@@ -21,16 +21,16 @@ pub struct OpenAPI {
     /// REQUIRED. The available paths and operations for the API.
     pub paths: Paths,
     /// An element to hold various schemas for the specification.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub components: Option<Components>,
+    #[serde(default, skip_serializing_if = "Components::is_empty")]
+    pub components: Components,
     /// A declaration of which security mechanisms can be used across the API.
     /// The list of values includes alternative security requirement objects
     /// that can be used. Only one of the security requirement objects need to
     /// be satisfied to authorize a request. Individual operations can override
     /// this definition. Global security settings may be overridden on a per-path
     /// basis.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub security: Option<Vec<SecurityRequirement>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub security: Vec<SecurityRequirement>,
     /// A list of tags used by the specification with additional metadata.
     /// The order of the tags can be used to reflect on their order by the
     /// parsing tools. Not all tags that are used by the Operation Object
@@ -47,11 +47,25 @@ pub struct OpenAPI {
     pub extensions: IndexMap<String, serde_json::Value>,
 }
 
+impl std::ops::Deref for OpenAPI {
+    type Target = Components;
+
+    fn deref(&self) -> &Self::Target {
+        &self.components
+    }
+}
+
+impl std::ops::DerefMut for OpenAPI {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.components
+    }
+}
+
 impl OpenAPI {
     /// Iterates through all [Operation]s in this API.
     ///
     /// The iterated items are tuples of `(&str, &str, &Operation, &PathItem)` containing
-    /// the path, method,  and the operation.
+    /// the path, method, and the operation.
     ///
     /// Path items containing `$ref`s are skipped.
     pub fn operations(&self) -> impl Iterator<Item=(&str, &str, &Operation, &PathItem)> {
@@ -75,57 +89,15 @@ impl OpenAPI {
     }
 
     pub fn get_operation_mut(&mut self, operation_id: &str) -> Option<&mut Operation> {
-        self.operations_mut().find(|(_, _, op)| op.operation_id.as_ref().unwrap() == operation_id).map(|(_, _, op)| op)
+        self.operations_mut()
+            .find(|(_, _, op)| op.operation_id.as_ref().unwrap() == operation_id)
+            .map(|(_, _, op)| op)
     }
 
     pub fn get_operation(&self, operation_id: &str) -> Option<(&Operation, &PathItem)> {
         self.operations()
             .find(|(_, _, op, _)| op.operation_id.as_ref().unwrap() == operation_id)
             .map(|(_, _, op, item)| (op, item))
-    }
-
-    pub fn components_mut(&mut self) -> &mut Components {
-        self.components.as_mut().unwrap()
-    }
-
-    pub fn components(&self) -> &Components {
-        self.components.as_ref().unwrap()
-    }
-
-    pub fn schemas_mut(&mut self) -> &mut IndexMap<String, ReferenceOr<Schema>> {
-        &mut self.components
-            .as_mut()
-            .unwrap()
-            .schemas
-    }
-
-    pub fn schemas(&self) -> &IndexMap<String, ReferenceOr<Schema>> {
-        &self.components
-            .as_ref()
-            .unwrap()
-            .schemas
-    }
-
-    pub fn clean(&mut self) {
-        for (_c, schema) in self.schemas_mut() {
-            let ReferenceOr::Item(schema) = schema else {
-                continue;
-            };
-            match &mut schema.schema_kind {
-                SchemaKind::Type(Type::String(StringType {
-                                                  enumeration,
-                                                  ..
-                                              })) => {
-                    enumeration.sort();
-                }
-                SchemaKind::OneOf { .. } => {}
-                SchemaKind::AllOf { .. } => {}
-                SchemaKind::AnyOf { .. } => {}
-                SchemaKind::Not { .. } => {}
-                SchemaKind::Any(_) => {}
-                _ => {}
-            }
-        }
     }
 
     /// Merge another OpenAPI document into this one, keeping original schemas on conflict.
@@ -168,32 +140,23 @@ impl OpenAPI {
             }
         }
 
-        if self.components.is_none() {
-            self.components = other.components
-        } else if let (Some(self_components), Some(other_components)) = (&mut self.components, other.components) {
-            merge_map(&mut self_components.extensions, other_components.extensions);
-            merge_map(&mut self_components.schemas, other_components.schemas);
-            merge_map(&mut self_components.responses, other_components.responses);
-            merge_map(&mut self_components.parameters, other_components.parameters);
-            merge_map(&mut self_components.examples, other_components.examples);
-            merge_map(&mut self_components.request_bodies, other_components.request_bodies);
-            merge_map(&mut self_components.headers, other_components.headers);
-            merge_map(&mut self_components.security_schemes, other_components.security_schemes);
-            merge_map(&mut self_components.links, other_components.links);
-            merge_map(&mut self_components.callbacks, other_components.callbacks);
-        }
+        merge_map(&mut self.components.extensions, other.components.extensions);
+        merge_map(&mut self.components.schemas, other.components.schemas.into());
+        merge_map(&mut self.components.responses, other.components.responses.into());
+        merge_map(&mut self.components.parameters, other.components.parameters.into());
+        merge_map(&mut self.components.examples, other.components.examples.into());
+        merge_map(&mut self.components.request_bodies, other.components.request_bodies.into());
+        merge_map(&mut self.components.headers, other.components.headers.into());
+        merge_map(&mut self.components.security_schemes, other.components.security_schemes.into());
+        merge_map(&mut self.components.links, other.components.links.into());
+        merge_map(&mut self.components.callbacks, other.components.callbacks.into());
 
-        if self.security.is_none() {
-            self.security = other.security;
-        } else if let (Some(self_security), Some(other_security)) = (&mut self.security, other.security) {
-            merge_vec(self_security, other_security, |a, b| {
-                if a.len() != b.len() {
-                    return false;
-                }
-                a.iter().all(|(a, _)| b.contains_key(a))
-            });
-        }
-
+        merge_vec(&mut self.security, other.security, |a, b| {
+            if a.len() != b.len() {
+                return false;
+            }
+            a.iter().all(|(a, _)| b.contains_key(a))
+        });
         merge_vec(&mut self.tags, other.tags, |a, b| a.name == b.name);
 
         match self.external_docs.as_mut() {
@@ -214,10 +177,6 @@ impl OpenAPI {
     pub fn merge_overwrite(self, other: OpenAPI) -> Result<Self, MergeError> {
         other.merge(self)
     }
-
-    pub fn add_schema(&mut self, name: &str, schema: Schema) {
-        self.schemas_mut().insert(name.to_string(), ReferenceOr::Item(schema));
-    }
 }
 
 impl Default for OpenAPI {
@@ -225,14 +184,14 @@ impl Default for OpenAPI {
         // 3.1 is a backwards incompatible change that we don't support yet.
         OpenAPI {
             openapi: "3.0.3".to_string(),
-            info: Default::default(),
-            servers: vec![],
-            paths: Default::default(),
-            components: Some(Default::default()),
-            security: None,
-            tags: vec![],
-            external_docs: None,
-            extensions: Default::default(),
+            info: default(),
+            servers: default(),
+            paths: default(),
+            components: default(),
+            security: default(),
+            tags: default(),
+            external_docs: default(),
+            extensions: default(),
         }
     }
 }
