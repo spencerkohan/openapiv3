@@ -73,12 +73,32 @@ pub enum ParameterSchemaOrContent {
 pub type Content = IndexMap<String, MediaType>;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Parameter {
+    #[serde(flatten)]
+    pub data: ParameterData,
+    #[serde(flatten)]
+    pub kind: ParameterKind,
+}
+
+impl std::ops::Deref for Parameter {
+    type Target = ParameterData;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl std::ops::DerefMut for Parameter {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "in", rename_all = "camelCase")]
-pub enum Parameter {
+pub enum ParameterKind {
     #[serde(rename_all = "camelCase")]
     Query {
-        #[serde(flatten)]
-        parameter_data: ParameterData,
         /// Determines whether the parameter value SHOULD allow reserved
         /// characters, as defined by RFC3986 :/?#[]@!$&'()*+,;= to be included
         /// without percent-encoding. This property only applies to parameters
@@ -100,8 +120,6 @@ pub enum Parameter {
         allow_empty_value: Option<bool>,
     },
     Header {
-        #[serde(flatten)]
-        parameter_data: ParameterData,
         /// Describes how the parameter value will be serialized depending on
         /// the type of the parameter value. Default values (based on value of
         /// in): for query - form; for path - simple; for header - simple; for
@@ -110,8 +128,6 @@ pub enum Parameter {
         style: HeaderStyle,
     },
     Path {
-        #[serde(flatten)]
-        parameter_data: ParameterData,
         /// Describes how the parameter value will be serialized depending on
         /// the type of the parameter value. Default values (based on value of
         /// in): for query - form; for path - simple; for header - simple; for
@@ -120,8 +136,6 @@ pub enum Parameter {
         style: PathStyle,
     },
     Cookie {
-        #[serde(flatten)]
-        parameter_data: ParameterData,
         /// Describes how the parameter value will be serialized depending on
         /// the type of the parameter value. Default values (based on value of
         /// in): for query - form; for path - simple; for header - simple; for
@@ -132,10 +146,10 @@ pub enum Parameter {
 }
 
 impl Parameter {
-    pub fn query(name: impl Into<String>, schema: ReferenceOr<Schema>) -> Self {
-        Parameter::Query {
-            parameter_data: ParameterData {
-                name: name.into(),
+    pub fn new_kind(name: String, schema: ReferenceOr<Schema>,  kind: ParameterKind) -> Self {
+        Parameter {
+            data: ParameterData {
+                name,
                 description: None,
                 required: false,
                 deprecated: None,
@@ -145,75 +159,22 @@ impl Parameter {
                 explode: None,
                 extensions: Default::default(),
             },
+            kind,
+        }
+    }
+
+    pub fn query(name: String, schema: ReferenceOr<Schema>) -> Self {
+        Self::new_kind(name, schema, ParameterKind::Query {
             allow_reserved: false,
             style: QueryStyle::Form,
             allow_empty_value: None,
-        }
+        })
     }
 
-    pub fn path(name: impl Into<String>, schema: ReferenceOr<Schema>) -> Self {
-        Parameter::Path {
-            parameter_data: ParameterData {
-                name: name.into(),
-                description: None,
-                required: true,
-                deprecated: None,
-                format: ParameterSchemaOrContent::Schema(schema),
-                example: None,
-                examples: Default::default(),
-                explode: None,
-                extensions: Default::default(),
-            },
+    pub fn path(name: String, schema: ReferenceOr<Schema>) -> Self {
+        Self::new_kind(name, schema, ParameterKind::Path {
             style: PathStyle::Simple,
-        }
-    }
-
-    /// Returns the `parameter_data` field of this [ParameterData].
-    pub fn parameter_data(self) -> ParameterData {
-        match self {
-            Parameter::Query {
-                parameter_data,
-                allow_reserved: _,
-                style: _,
-                allow_empty_value: _,
-            } => parameter_data,
-            Parameter::Header {
-                parameter_data,
-                style: _,
-            } => parameter_data,
-            Parameter::Path {
-                parameter_data,
-                style: _,
-            } => parameter_data,
-            Parameter::Cookie {
-                parameter_data,
-                style: _,
-            } => parameter_data,
-        }
-    }
-
-    /// Returns the `parameter_data` field of this [ParameterData] by reference.
-    pub fn parameter_data_ref(&self) -> &ParameterData {
-        match self {
-            Parameter::Query {
-                parameter_data,
-                allow_reserved: _,
-                style: _,
-                allow_empty_value: _,
-            } => parameter_data,
-            Parameter::Header {
-                parameter_data,
-                style: _,
-            } => parameter_data,
-            Parameter::Path {
-                parameter_data,
-                style: _,
-            } => parameter_data,
-            Parameter::Cookie {
-                parameter_data,
-                style: _,
-            } => parameter_data,
-        }
+        })
     }
 }
 

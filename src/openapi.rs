@@ -129,8 +129,6 @@ impl OpenAPI {
                 for (a, b) in self_item.parameters.iter_mut().zip(item.parameters) {
                     let a = a.as_item().ok_or_else(|| MergeError::new("Parameter references are not yet supported. Please open an issue if you need this feature."))?;
                     let b = b.as_item().ok_or_else(|| MergeError::new("Parameter references are not yet supported. Please open an issue if you need this feature."))?;
-                    let a = a.parameter_data_ref();
-                    let b = b.parameter_data_ref();
                     if a.name != b.name {
                         return Err(MergeError(format!("PathItem {} parameter {} does not have the same name as {}", path, a.name, b.name)));
                     }

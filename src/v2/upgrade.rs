@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use indexmap::IndexMap;
 use crate as v3;
-use crate::StatusCode;
+use crate::{Parameter, StatusCode};
 use super::schema as v2;
 
 trait TryRemove<T> {
@@ -267,10 +267,10 @@ impl TryInto<v3::ReferenceOr<v3::Parameter>> for v2::Parameter {
         } = self;
         let type_ = type_.unwrap();
 
-        let mut schema_kind = build_schema_kind(&type_, format);
-        let mut schema_data = v3::SchemaData::default();
+        let mut kind = build_schema_kind(&type_, format);
+        let mut data = v3::SchemaData::default();
 
-        match &mut schema_kind {
+        match &mut kind {
             v3::SchemaKind::Type(v3::Type::Array(ref mut a)) => {
                 a.items = items.map(|item| {
                     let item: v3::ReferenceOr<v3::Schema> = item.into();
@@ -280,7 +280,7 @@ impl TryInto<v3::ReferenceOr<v3::Parameter>> for v2::Parameter {
             }
             _ => {}
         }
-        schema_data.default = default;
+        data.default = default;
 
         let mut explode = None;
         if let Some(collection_format) = collection_format {
@@ -291,43 +291,40 @@ impl TryInto<v3::ReferenceOr<v3::Parameter>> for v2::Parameter {
             }
         }
 
-        let parameter_data = v3::ParameterData {
+        let schema = v3::Schema { data, kind };
+        let data = v3::ParameterData {
             name,
             description,
             required: required.unwrap_or_default(),
             deprecated: None,
-            format: v3::ParameterSchemaOrContent::Schema(v3::ReferenceOr::Item(v3::Schema {
-                data: schema_data,
-                kind: schema_kind,
-            })),
+            format: v3::ParameterSchemaOrContent::Schema(schema.into()),
             example: None,
             examples: Default::default(),
             explode,
             extensions: Default::default(),
         };
-        let parameter = match location {
+        let kind = match location {
             v2::ParameterLocation::Query => {
-                v3::Parameter::Query {
-                    parameter_data,
+                v3::ParameterKind::Query {
                     allow_reserved: false,
                     style: Default::default(),
                     allow_empty_value: None,
                 }
             }
             v2::ParameterLocation::Header => {
-                v3::Parameter::Header {
-                    parameter_data,
+                v3::ParameterKind::Header {
                     style: Default::default(),
                 }
             }
             v2::ParameterLocation::Path => {
-                v3::Parameter::Path {
-                    parameter_data,
+                v3::ParameterKind::Path {
                     style: Default::default(),
                 }
             }
-            v2::ParameterLocation::FormData | v2::ParameterLocation::Body => unreachable!(),
+            | v2::ParameterLocation::FormData
+            | v2::ParameterLocation::Body => panic!("Invalid location"),
         };
+        let parameter = Parameter { data, kind };
         Ok(v3::ReferenceOr::Item(parameter))
     }
 }
