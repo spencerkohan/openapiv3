@@ -116,7 +116,7 @@ impl Schema {
 
     /// Create a Map<String, inner> schema
     pub fn new_map(inner: impl Into<ReferenceOr<Schema>>) -> Self {
-        let inner = Box::new(inner.into());
+        let inner = inner.into().boxed();
         Self::new_kind(SchemaKind::Type(Type::Object(ObjectType {
             additional_properties: Some(AdditionalProperties::Schema(inner)),
             ..ObjectType::default()
