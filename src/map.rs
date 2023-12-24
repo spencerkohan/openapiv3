@@ -49,6 +49,24 @@ impl<T> IntoIterator for RefOrMap<T> {
     }
 }
 
+impl<'a, T> IntoIterator for &'a RefOrMap<T> {
+    type Item = (&'a String, &'a RefOr<T>);
+    type IntoIter = indexmap::map::Iter<'a, String, RefOr<T>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut RefOrMap<T> {
+    type Item = (&'a String, &'a mut RefOr<T>);
+    type IntoIter = indexmap::map::IterMut<'a, String, RefOr<T>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut()
+    }
+}
+
 impl<T> Default for RefOrMap<T> {
     fn default() -> Self {
         RefOrMap(IndexMap::default())
