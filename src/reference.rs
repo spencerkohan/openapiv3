@@ -70,15 +70,8 @@ impl<T> ReferenceOr<T> {
         }
     }
 
-    pub fn boxed(self) -> ReferenceOr<Box<T>> {
-        match self {
-            ReferenceOr::Reference { reference } => ReferenceOr::Reference{ reference },
-            ReferenceOr::Item(i) => ReferenceOr::Item(Box::new(i))
-        }
-    }
-
-    pub fn boxed_item(item: T) -> ReferenceOr<Box<T>> {
-        ReferenceOr::Item(Box::new(item))
+    pub fn boxed(self) -> Box<ReferenceOr<T>> {
+        Box::new(self)
     }
 
     /// Converts this [ReferenceOr] to the item inside, if it exists.
@@ -190,16 +183,6 @@ impl<T> From<T> for ReferenceOr<T> {
         ReferenceOr::Item(item)
     }
 }
-
-impl ReferenceOr<Box<Schema>> {
-    pub fn unbox(&self) -> ReferenceOr<Schema> {
-        match self {
-            ReferenceOr::Reference { reference } => ReferenceOr::Reference { reference: reference.clone() },
-            ReferenceOr::Item(boxed) => ReferenceOr::Item(*boxed.clone()),
-        }
-    }
-}
-
 
 impl ReferenceOr<Parameter> {
     pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a Parameter> {

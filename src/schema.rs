@@ -82,87 +82,70 @@ pub enum SchemaKind {
 
 
 impl Schema {
+    fn new_kind(kind: SchemaKind) -> Self {
+        Self { data: SchemaData::default(), kind }
+    }
+
     pub fn new_number() -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::Number(NumberType::default())),
-        }
+        Self::new_kind(SchemaKind::Type(Type::Number(NumberType::default())))
     }
 
     pub fn new_integer() -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::Integer(IntegerType::default())),
-        }
+        Self::new_kind(SchemaKind::Type(Type::Integer(IntegerType::default())))
     }
 
     pub fn new_bool() -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::Boolean {}),
-        }
-    }
-    pub fn new_object() -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::Object(ObjectType::default())),
-        }
+        Self::new_kind(SchemaKind::Type(Type::Boolean {}))
     }
 
     pub fn new_str_enum(enumeration: Vec<String>) -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::String(StringType {
-                enumeration,
-                ..StringType::default()
-            })),
-        }
+        Self::new_kind(SchemaKind::Type(Type::String(StringType {
+            enumeration,
+            ..StringType::default()
+        })))
     }
 
     pub fn new_string() -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::String(StringType::default())),
-        }
+        Self::new_kind(SchemaKind::Type(Type::String(StringType::default())))
     }
 
-    pub fn new_any_object() -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::Object(ObjectType {
-                additional_properties: Some(AdditionalProperties::Any(true)),
-                ..ObjectType::default()
-            })),
-        }
+    /// Create a schemaless object schema
+    pub fn new_object() -> Self {
+        Self::new_kind(SchemaKind::Type(Type::Object(ObjectType::default())))
     }
 
-    pub fn new_any_array() -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::Array(ArrayType::default()))
-        }
+    /// Create a Map<String, inner> schema
+    pub fn new_map(inner: impl Into<ReferenceOr<Schema>>) -> Self {
+        let inner = Box::new(inner.into());
+        Self::new_kind(SchemaKind::Type(Type::Object(ObjectType {
+            additional_properties: Some(AdditionalProperties::Schema(inner)),
+            ..ObjectType::default()
+        })))
     }
 
+    /// Create a Map<String, Any> schema
+    pub fn new_map_any() -> Self {
+        Self::new_kind(SchemaKind::Type(Type::Object(ObjectType {
+            additional_properties: Some(AdditionalProperties::Any(true)),
+            ..ObjectType::default()
+        })))
+    }
+
+    /// Create an Array<Any> schema
+    pub fn new_array_any() -> Self {
+        Self::new_kind(SchemaKind::Type(Type::Array(ArrayType::default())))
+    }
+
+    /// Create a new array schema with items of the given type
     pub fn new_array(inner: impl Into<ReferenceOr<Schema>>) -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::Array(ArrayType {
-                items: Some(inner.into().boxed()),
-                ..ArrayType::default()
-            }))
-        }
+        let inner = inner.into().boxed();
+        Self::new_kind(SchemaKind::Type(Type::Array(ArrayType {
+            items: Some(inner),
+            ..ArrayType::default()
+        })))
     }
 
-    pub fn new_array_ref(reference: &str) -> Self {
-        Self {
-            data: SchemaData::default(),
-            kind: SchemaKind::Type(Type::Array(ArrayType {
-                items: Some(ReferenceOr::schema_ref(reference)),
-                ..ArrayType::default()
-            })),
-        }
-    }
-
+    /// Create an Any schema
     pub fn new_any() -> Self {
         Self {
             data: SchemaData::default(),
@@ -177,16 +160,8 @@ impl Schema {
     }
 
     pub fn with_format(mut self, format: &str) -> Self {
-        match &mut self.kind {
-            SchemaKind::Type(Type::String(s)) => {
-                s.format = serde_json::from_value(Value::String(format.to_string())).unwrap();
-            }
-            SchemaKind::OneOf { .. } => {}
-            SchemaKind::AllOf { .. } => {}
-            SchemaKind::AnyOf { .. } => {}
-            SchemaKind::Not { .. } => {}
-            SchemaKind::Any(_) => {}
-            _ => {}
+        if let SchemaKind::Type(Type::String(s)) = &mut self.kind {
+            s.format = serde_json::from_value(Value::String(format.to_string())).unwrap();
         }
         self
     }
@@ -249,7 +224,7 @@ pub struct AnySchema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_properties: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub items: Option<ReferenceOr<Box<Schema>>>,
+    pub items: Option<Box<ReferenceOr<Schema>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min_items: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -346,7 +321,7 @@ pub struct ObjectType {
 #[serde(rename_all = "camelCase")]
 pub struct ArrayType {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub items: Option<ReferenceOr<Box<Schema>>>,
+    pub items: Option<Box<ReferenceOr<Schema>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min_items: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -454,7 +429,7 @@ impl Schema {
                 } else {
                     o.required.retain(|s| s != field);
                 }
-            },
+            }
             SchemaKind::Any(AnySchema { ref mut required, .. }) => {
                 if is_required {
                     if !required.iter().any(|s| s == field) {
@@ -463,8 +438,8 @@ impl Schema {
                 } else {
                     required.retain(|s| s != field);
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
@@ -588,7 +563,6 @@ allOf:
         let s = Schema::new_string().with_format("uuid");
         let SchemaKind::Type(crate::Type::String(s)) = s.kind else { panic!() };
         assert_matches!(s.format, VariantOrUnknownOrEmpty::Unknown(s) if s == "uuid");
-
     }
 }
 
