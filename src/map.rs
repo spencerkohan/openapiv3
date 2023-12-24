@@ -1,5 +1,6 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+
 use crate::RefOr;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -39,6 +40,15 @@ impl<T> std::iter::FromIterator<(String, RefOr<T>)> for RefOrMap<T> {
     }
 }
 
+impl<T> IntoIterator for RefOrMap<T> {
+    type Item = (String, RefOr<T>);
+    type IntoIter = indexmap::map::IntoIter<String, RefOr<T>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl<T> Default for RefOrMap<T> {
     fn default() -> Self {
         RefOrMap(IndexMap::default())
@@ -54,6 +64,7 @@ impl<T> Into<IndexMap<String, RefOr<T>>> for RefOrMap<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_oa_ref_map_insert_coercion() {
         let mut s: RefOrMap<usize> = RefOrMap(IndexMap::new());
