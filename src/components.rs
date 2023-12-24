@@ -45,4 +45,17 @@ impl Components {
     pub fn add_schema(&mut self, s: &str, schema: Schema) -> Option<ReferenceOr<Schema>> {
         self.schemas.insert(s.to_string(), ReferenceOr::Item(schema))
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.security_schemes.is_empty()
+            && self.responses.is_empty()
+            && self.parameters.is_empty()
+            && self.examples.is_empty()
+            && self.request_bodies.is_empty()
+            && self.headers.is_empty()
+            && self.schemas.is_empty()
+            && self.links.is_empty()
+            && self.callbacks.is_empty()
+            && self.extensions.is_empty()
+    }
 }

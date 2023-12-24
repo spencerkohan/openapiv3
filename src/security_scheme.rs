@@ -52,46 +52,40 @@ pub enum APIKeyLocation {
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OAuth2Flows {
-    #[serde(flatten)]
-    pub implicit: Option<OAuth2Flow>,
-    #[serde(flatten)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub implicit: Option<ImplicitOAuth2Flow>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub password: Option<OAuth2Flow>,
-    #[serde(flatten)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub client_credentials: Option<OAuth2Flow>,
-    #[serde(flatten)]
-    pub authorization_code: Option<OAuth2Flow>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authorization_code: Option<AuthCodeOAuth2Flow>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum OAuth2Flow {
-    #[serde(rename_all = "camelCase")]
-    Implicit {
-        authorization_url: String,
-        refresh_url: Option<String>,
-        #[serde(default)]
-        scopes: IndexMap<String, String>,
-    },
-    #[serde(rename_all = "camelCase")]
-    Password {
-        refresh_url: Option<String>,
-        token_url: String,
-        #[serde(default)]
-        scopes: IndexMap<String, String>,
-    },
-    #[serde(rename_all = "camelCase")]
-    ClientCredentials {
-        refresh_url: Option<String>,
-        token_url: String,
-        #[serde(default)]
-        scopes: IndexMap<String, String>,
-    },
-    #[serde(rename_all = "camelCase")]
-    AuthorizationCode {
-        authorization_url: String,
-        token_url: String,
-        refresh_url: Option<String>,
-        #[serde(default)]
-        scopes: IndexMap<String, String>,
-    },
+pub struct ImplicitOAuth2Flow {
+    pub authorization_url: String,
+    pub refresh_url: Option<String>,
+    #[serde(default)]
+    pub scopes: IndexMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct OAuth2Flow {
+    pub refresh_url: Option<String>,
+    pub token_url: String,
+    #[serde(default)]
+    pub scopes: IndexMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthCodeOAuth2Flow {
+    pub authorization_url: String,
+    pub token_url: String,
+    pub refresh_url: Option<String>,
+    #[serde(default)]
+    pub scopes: IndexMap<String, String>,
 }

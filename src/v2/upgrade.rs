@@ -559,7 +559,7 @@ impl Into<v3::ReferenceOr<v3::SecurityScheme>> for v2::Security {
                 let mut authorization_code = None;
                 match flow {
                     v2::Flow::AccessCode => {
-                        authorization_code = Some(v3::OAuth2Flow::AuthorizationCode {
+                        authorization_code = Some(v3::AuthCodeOAuth2Flow {
                             authorization_url,
                             token_url: token_url.unwrap(),
                             refresh_url: None,
@@ -567,21 +567,21 @@ impl Into<v3::ReferenceOr<v3::SecurityScheme>> for v2::Security {
                         });
                     }
                     v2::Flow::Application => {
-                        client_credentials = Some(v3::OAuth2Flow::ClientCredentials {
+                        client_credentials = Some(v3::OAuth2Flow {
                             token_url: token_url.unwrap(),
                             refresh_url: None,
                             scopes,
                         });
                     }
                     v2::Flow::Implicit => {
-                        implicit = Some(v3::OAuth2Flow::Implicit {
+                        implicit = Some(v3::ImplicitOAuth2Flow {
                             authorization_url,
                             refresh_url: None,
                             scopes,
                         });
                     }
                     v2::Flow::Password => {
-                        password = Some(v3::OAuth2Flow::Password {
+                        password = Some(v3::OAuth2Flow {
                             token_url: token_url.unwrap(),
                             refresh_url: None,
                             scopes,
