@@ -161,10 +161,9 @@ impl Schema {
         }
     }
 
-    pub fn add_property(&mut self, s: &str, schema: impl Into<RefOr<Schema>>) -> Result<()> {
+    pub fn add_property(&mut self, s: &str, schema: impl Into<RefOr<Schema>>) -> Option<RefOr<Schema>> {
         let p = self.properties_mut().ok_or_else(|| anyhow!("Schema is not an object"))?;
-        p.insert(s.to_string(), schema.into());
-        Ok(())
+        p.insert(s.to_string(), schema.into())
     }
 
     pub fn with_format(mut self, format: &str) -> Self {
