@@ -146,7 +146,7 @@ pub enum ParameterKind {
 }
 
 impl Parameter {
-    pub fn new_kind(name: String, schema: RefOr<Schema>, kind: ParameterKind) -> Self {
+    fn new_kind(name: String, schema: RefOr<Schema>, kind: ParameterKind) -> Self {
         Parameter {
             data: ParameterData {
                 name,
@@ -163,22 +163,23 @@ impl Parameter {
         }
     }
 
-    pub fn query(name: impl Into<String>, schema: RefOr<Schema>) -> Self {
-        Self::new_kind(name.into(), schema, ParameterKind::Query {
+    pub fn query(name: impl Into<String>, schema: impl Into<RefOr<Schema>>) -> Self {
+        Self::new_kind(name.into(), schema.into(), ParameterKind::Query {
             allow_reserved: false,
             style: QueryStyle::Form,
             allow_empty_value: None,
         })
     }
 
-    pub fn path(name: impl Into<String>, schema: RefOr<Schema>) -> Self {
-        Self::new_kind(name.into(), schema, ParameterKind::Path {
+    pub fn path(name: impl Into<String>, schema: impl Into<RefOr<Schema>>) -> Self {
+        Self::new_kind(name.into(), schema.into(), ParameterKind::Path {
             style: PathStyle::Simple,
         })
     }
 }
 
 struct SkipSerializeIfDefault;
+
 impl SkipSerializeIfDefault {
     #[cfg(feature = "skip_serializing_defaults")]
     fn skip<D: Default + std::cmp::PartialEq>(value: &D) -> bool {
@@ -190,52 +191,34 @@ impl SkipSerializeIfDefault {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum PathStyle {
     Matrix,
     Label,
+    #[default]
     Simple,
 }
 
-impl Default for PathStyle {
-    fn default() -> Self {
-        PathStyle::Simple
-    }
-}
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum QueryStyle {
+    #[default]
     Form,
     SpaceDelimited,
     PipeDelimited,
     DeepObject,
 }
 
-impl Default for QueryStyle {
-    fn default() -> Self {
-        QueryStyle::Form
-    }
-}
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum CookieStyle {
+    #[default]
     Form,
 }
-
-impl Default for CookieStyle {
-    fn default() -> CookieStyle {
-        CookieStyle::Form
-    }
-}
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum HeaderStyle {
+    #[default]
     Simple,
-}
-
-impl Default for HeaderStyle {
-    fn default() -> HeaderStyle {
-        HeaderStyle::Simple
-    }
 }

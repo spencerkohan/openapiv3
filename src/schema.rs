@@ -153,6 +153,10 @@ impl Schema {
         Self::new_kind(SchemaKind::AllOf { all_of })
     }
 
+    pub fn new_any_of(any_of: Vec<RefOr<Schema>>) -> Self {
+        Self::new_kind(SchemaKind::AnyOf { any_of })
+    }
+
     /// Create an Any schema
     pub fn new_any() -> Self {
         Self {
@@ -162,7 +166,7 @@ impl Schema {
     }
 
     pub fn add_property(&mut self, s: &str, schema: impl Into<RefOr<Schema>>) -> Option<RefOr<Schema>> {
-        let p = self.properties_mut().ok_or_else(|| anyhow!("Schema is not an object"))?;
+        let p = self.properties_mut().unwrap();
         p.insert(s.to_string(), schema.into())
     }
 
