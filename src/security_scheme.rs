@@ -66,6 +66,7 @@ pub struct OAuth2Flows {
 #[serde(rename_all = "camelCase")]
 pub struct ImplicitOAuth2Flow {
     pub authorization_url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refresh_url: Option<String>,
     #[serde(default)]
     pub scopes: IndexMap<String, String>,
@@ -74,6 +75,7 @@ pub struct ImplicitOAuth2Flow {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OAuth2Flow {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refresh_url: Option<String>,
     pub token_url: String,
     #[serde(default)]
@@ -85,6 +87,7 @@ pub struct OAuth2Flow {
 pub struct AuthCodeOAuth2Flow {
     pub authorization_url: String,
     pub token_url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub refresh_url: Option<String>,
     #[serde(default)]
     pub scopes: IndexMap<String, String>,
