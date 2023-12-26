@@ -64,6 +64,7 @@ pub use self::variant_or::*;
 pub use map::*;
 pub use http::method::Method as PathMethod;
 pub use versioned::*;
+pub use indexmap::IndexMap;
 
 fn default<T: Default>() -> T {
     T::default()
