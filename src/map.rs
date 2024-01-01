@@ -7,8 +7,8 @@ use crate::RefOr;
 pub struct RefOrMap<T>(IndexMap<String, RefOr<T>>);
 
 impl<T> RefOrMap<T> {
-    pub fn new(map: IndexMap<String, RefOr<T>>) -> Self {
-        RefOrMap(map)
+    pub fn new() -> Self {
+        RefOrMap(IndexMap::new())
     }
 }
 
@@ -27,10 +27,10 @@ impl<T> std::ops::DerefMut for RefOrMap<T> {
 }
 
 impl<T> RefOrMap<T> {
-    pub fn insert(&mut self, key: impl Into<String>, value: impl Into<RefOr<T>>) {
+    pub fn insert(&mut self, key: impl Into<String>, value: impl Into<RefOr<T>>) -> Option<RefOr<T>> {
         let key = key.into();
         let value = value.into();
-        self.0.insert(key, value);
+        self.0.insert(key, value)
     }
 }
 
@@ -76,6 +76,12 @@ impl<T> Default for RefOrMap<T> {
 impl<T> Into<IndexMap<String, RefOr<T>>> for RefOrMap<T> {
     fn into(self) -> IndexMap<String, RefOr<T>> {
         self.0
+    }
+}
+
+impl<T> From<IndexMap<String, RefOr<T>>> for RefOrMap<T> {
+    fn from(map: IndexMap<String, RefOr<T>>) -> Self {
+        RefOrMap(map)
     }
 }
 
