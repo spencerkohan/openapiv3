@@ -131,7 +131,7 @@ macro_rules! map {
         #[allow(unused_mut)]
         let mut m = IndexMap::new();
         $(m.insert($key, $value);)*
-        $crate::RefOrMap::new(m)
+        $crate::RefOrMap::from(m)
     }};
 }
 
