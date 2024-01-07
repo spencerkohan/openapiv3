@@ -165,11 +165,6 @@ impl Schema {
         }
     }
 
-    pub fn add_property(&mut self, s: &str, schema: impl Into<RefOr<Schema>>) -> Option<RefOr<Schema>> {
-        let p = self.properties_mut().unwrap();
-        p.insert(s.to_string(), schema.into())
-    }
-
     pub fn with_format(mut self, format: &str) -> Self {
         if let SchemaKind::Type(Type::String(s)) = &mut self.kind {
             s.format = serde_json::from_value(Value::String(format.to_string())).unwrap();
@@ -225,7 +220,7 @@ pub struct AnySchema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum: Option<f64>,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
-    pub properties: IndexMap<String, RefOr<Schema>>,
+    pub properties: RefOrMap<Schema>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -382,7 +377,11 @@ impl VariantOrUnknownOrEmpty<StringFormat> {
 
 
 impl Schema {
-    pub fn properties(&self) -> Option<&IndexMap<String, RefOr<Schema>>> {
+    pub fn properties(&self) -> &RefOrMap<Schema> {
+        self.get_properties().expect("Schema is not an object")
+    }
+
+    pub fn get_properties(&self) -> Option<&RefOrMap<Schema>> {
         match &self.kind {
             SchemaKind::Type(Type::Object(o)) => Some(&o.properties),
             SchemaKind::Any(AnySchema { properties, .. }) => Some(properties),
@@ -390,23 +389,7 @@ impl Schema {
         }
     }
 
-    pub fn properties_iter<'a>(&'a self, spec: &'a OpenAPI) -> Result<Box<dyn Iterator<Item=(&'a String, &'a RefOr<Schema>)> + 'a>> {
-        match &self.kind {
-            SchemaKind::Type(Type::Object(o)) => Ok(Box::new(o.properties.iter())),
-            SchemaKind::Any(AnySchema { properties, .. }) => Ok(Box::new(properties.iter())),
-            SchemaKind::AllOf { all_of } => {
-                let mut vec = Vec::new();
-                for schema in all_of {
-                    let schema = schema.resolve(spec).properties_iter(spec)?;
-                    vec.extend(schema);
-                }
-                Ok(Box::new(vec.into_iter()))
-            }
-            _ => Err(anyhow!("Schema is not an object")),
-        }
-    }
-
-    pub fn properties_mut(&mut self) -> Option<&mut IndexMap<String, RefOr<Schema>>> {
+    pub fn get_properties_mut(&mut self) -> Option<&mut RefOrMap<Schema>> {
         match &mut self.kind {
             SchemaKind::Type(Type::Object(ref mut o)) => Some(&mut o.properties),
             SchemaKind::Any(AnySchema { ref mut properties, .. }) => Some(properties),
@@ -414,7 +397,23 @@ impl Schema {
         }
     }
 
-    pub fn required(&self, field: &str) -> bool {
+    pub fn properties_mut(&mut self) -> &mut RefOrMap<Schema> {
+        self.get_properties_mut().expect("Schema is not an object")
+    }
+
+    pub fn properties_iter<'a>(&'a self, spec: &'a OpenAPI) -> Box<dyn Iterator<Item=(&'a String, &'a RefOr<Schema>)> + 'a> {
+        match &self.kind {
+            SchemaKind::Type(Type::Object(o)) => Box::new(o.properties.iter()),
+            SchemaKind::Any(AnySchema { properties, .. }) => Box::new(properties.iter()),
+            SchemaKind::AllOf { all_of } => Box::new(all_of
+                .iter()
+                .map(move |schema| schema.resolve(spec).properties_iter(spec))
+                .flatten()),
+            _ => Box::new(std::iter::empty())
+        }
+    }
+
+    pub fn is_required(&self, field: &str) -> bool {
         match &self.kind {
             SchemaKind::Type(Type::Object(o)) => o.required.iter().any(|s| s == field),
             SchemaKind::Any(AnySchema { required, .. }) => required.iter().any(|s| s == field),
@@ -422,7 +421,19 @@ impl Schema {
         }
     }
 
-    pub fn required_mut(&mut self) -> Option<&mut Vec<String>> {
+    pub fn get_required(&self) -> Option<&Vec<String>> {
+        match &self.kind {
+            SchemaKind::Type(Type::Object(o)) => Some(&o.required),
+            SchemaKind::Any(AnySchema { required, .. }) => Some(required),
+            _ => None,
+        }
+    }
+
+    pub fn required(&self) -> &Vec<String> {
+        self.get_required().expect("Schema is not an object")
+    }
+
+    pub fn get_required_mut(&mut self) -> Option<&mut Vec<String>> {
         match &mut self.kind {
             SchemaKind::Type(Type::Object(ref mut o)) => Some(&mut o.required),
             SchemaKind::Any(AnySchema { ref mut required, .. }) => Some(required),
@@ -430,27 +441,22 @@ impl Schema {
         }
     }
 
-    pub fn set_required(&mut self, field: &str, is_required: bool) {
-        match &mut self.kind {
-            SchemaKind::Type(Type::Object(ref mut o)) => {
-                if is_required {
-                    if !o.required.iter().any(|s| s == field) {
-                        o.required.push(field.to_string());
-                    }
-                } else {
-                    o.required.retain(|s| s != field);
-                }
+    pub fn required_mut(&mut self) -> &mut Vec<String> {
+        self.get_required_mut().expect("Schema is not an object")
+    }
+
+    pub fn add_required(&mut self, field: &str) {
+        if let Some(req) = self.get_required_mut() {
+            if req.iter().any(|f| f == field) {
+                return;
             }
-            SchemaKind::Any(AnySchema { ref mut required, .. }) => {
-                if is_required {
-                    if !required.iter().any(|s| s == field) {
-                        required.push(field.to_string());
-                    }
-                } else {
-                    required.retain(|s| s != field);
-                }
-            }
-            _ => {}
+            req.push(field.to_string());
+        }
+    }
+
+    pub fn remove_required(&mut self, field: &str) {
+        if let Some(req) = self.get_required_mut() {
+            req.retain(|f| f != field);
         }
     }
 

@@ -162,7 +162,6 @@ fn resolve_helper<'a>(reference: &str, spec: &'a OpenAPI, seen: &mut HashSet<Str
                 .expect(&format!("The schema {} was used in a reference, but that schema is itself a reference to another schema.", schema_name));
             let prop_schema = schema
                 .properties()
-                .expect(&format!("Tried to resolve reference {}, but {} is not an object with properties.", reference, schema_name))
                 .get(property)
                 .expect(&format!("Schema {} does not have property {}.", schema_name, property));
             prop_schema.resolve(spec)
