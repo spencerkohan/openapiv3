@@ -14,13 +14,13 @@ impl<T> RefOrMap<T> {
     /// Directly get the inner struct of a RefOr::Item
     pub fn get2(&self, key: &str) -> Option<&T> {
         let v = self.0.get(key);
-        v.and_then(|v| v.get_item())
+        v.and_then(|v| v.as_item())
     }
 
     /// Directly get_mut the inner struct of a RefOr::Item
     pub fn get_mut2(&mut self, key: &str) -> Option<&mut T> {
         let v = self.0.get_mut(key);
-        v.and_then(|v| v.get_mut())
+        v.and_then(|v| v.as_mut())
     }
 
     /// Directly lookup the inner struct of a RefOr::Item, panicking on not found

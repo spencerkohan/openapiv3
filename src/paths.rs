@@ -159,7 +159,8 @@ impl Paths {
     }
 
     pub fn insert_operation(&mut self, path: String, method: Method, operation: Operation) -> Option<Operation> {
-        let item = self.paths.entry(path).or_default().as_mut();
+        let item = self.paths.entry(path).or_default();
+        let item = item.as_mut().expect("Currently don't support references for PathItem");
         match method {
             Method::GET => item.get.replace(operation),
             Method::PUT => item.put.replace(operation),
