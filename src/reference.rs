@@ -109,16 +109,21 @@ impl<T> RefOr<T> {
     /// # use openapiv3::RefOr;
     ///
     /// let i = RefOr::Item(1);
-    /// assert_eq!(i.as_item(), Some(&1));
+    /// assert_eq!(i.get_item(), Some(&1));
     ///
     /// let j: RefOr<u8> = RefOr::Reference { reference: String::new() };
-    /// assert_eq!(j.as_item(), None);
+    /// assert_eq!(j.get_item(), None);
     /// ```
-    pub fn as_item(&self) -> Option<&T> {
+
+    pub fn get_item(&self) -> Option<&T> {
         match self {
             RefOr::Reference { .. } => None,
             RefOr::Item(i) => Some(i),
         }
+    }
+
+    pub fn as_item(&self) -> &T {
+        self.get_item().expect("Not an item")
     }
 
     pub fn as_ref_str(&self) -> Option<&str> {
@@ -128,7 +133,11 @@ impl<T> RefOr<T> {
         }
     }
 
-    pub fn as_mut(&mut self) -> Option<&mut T> {
+    pub fn as_mut(&mut self) -> &mut T {
+        self.get_mut().expect("Not an item")
+    }
+
+    pub fn get_mut(&mut self) -> Option<&mut T> {
         match self {
             RefOr::Reference { .. } => None,
             RefOr::Item(i) => Some(i),
@@ -158,7 +167,7 @@ fn resolve_helper<'a>(reference: &str, spec: &'a OpenAPI, seen: &mut HashSet<Str
         SchemaReference::Property { schema: schema_name, property } => {
             let schema = spec.schemas.get(schema_name)
                 .expect(&format!("Schema {} not found in OpenAPI spec.", schema_name))
-                .as_item()
+                .get_item()
                 .expect(&format!("The schema {} was used in a reference, but that schema is itself a reference to another schema.", schema_name));
             let prop_schema = schema
                 .properties()
@@ -193,7 +202,7 @@ impl RefOr<Parameter> {
                 let name = get_parameter_name(&reference)?;
                 spec.parameters.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
-                    .as_item()
+                    .get_item()
                     .ok_or(anyhow!("{} is circular.", reference))
             }
             RefOr::Item(parameter) => Ok(parameter),
@@ -209,7 +218,7 @@ impl RefOr<Response> {
                 let name = get_response_name(&reference)?;
                 spec.responses.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
-                    .as_item()
+                    .get_item()
                     .ok_or(anyhow!("{} is circular.", reference))
             }
             RefOr::Item(response) => Ok(response),
@@ -224,7 +233,7 @@ impl RefOr<RequestBody> {
                 let name = get_request_body_name(&reference)?;
                 spec.request_bodies.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
-                    .as_item()
+                    .get_item()
                     .ok_or(anyhow!("{} is circular.", reference))
             }
             RefOr::Item(request_body) => Ok(request_body),

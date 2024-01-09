@@ -71,7 +71,7 @@ impl OpenAPI {
     pub fn operations(&self) -> impl Iterator<Item=(&str, &str, &Operation, &PathItem)> {
         self.paths
             .iter()
-            .filter_map(|(path, item)| item.as_item().map(|i| (path, i)))
+            .filter_map(|(path, item)| item.get_item().map(|i| (path, i)))
             .flat_map(|(path, item)| {
                 item.iter()
                     .map(move |(method, op)| (path.as_str(), method, op, item))
@@ -81,7 +81,7 @@ impl OpenAPI {
     pub fn operations_mut(&mut self) -> impl Iterator<Item=(&str, &str, &mut Operation)> {
         self.paths
             .iter_mut()
-            .filter_map(|(path, item)| item.as_mut().map(|i| (path, i)))
+            .filter_map(|(path, item)| item.get_mut().map(|i| (path, i)))
             .flat_map(|(path, item)| {
                 item.iter_mut()
                     .map(move |(method, op)| (path.as_str(), method, op))
@@ -110,7 +110,7 @@ impl OpenAPI {
         for (path, item) in other.paths {
             let item = item.into_item().ok_or_else(|| MergeError::new("PathItem references are not yet supported. Please opena n issue if you need this feature."))?;
             if self.paths.paths.contains_key(&path) {
-                let self_item = self.paths.paths.get_mut(&path).unwrap().as_mut().ok_or_else(|| MergeError::new("PathItem references are not yet supported. Please open an issue if you need this feature."))?;
+                let self_item = self.paths.paths.get_mut(&path).unwrap().get_mut().ok_or_else(|| MergeError::new("PathItem references are not yet supported. Please open an issue if you need this feature."))?;
                 option_or(&mut self_item.get, item.get);
                 option_or(&mut self_item.put, item.put);
                 option_or(&mut self_item.post, item.post);
@@ -127,8 +127,8 @@ impl OpenAPI {
                     return Err(MergeError(format!("PathItem {} parameters do not have the same length", path)));
                 }
                 for (a, b) in self_item.parameters.iter_mut().zip(item.parameters) {
-                    let a = a.as_item().ok_or_else(|| MergeError::new("Parameter references are not yet supported. Please open an issue if you need this feature."))?;
-                    let b = b.as_item().ok_or_else(|| MergeError::new("Parameter references are not yet supported. Please open an issue if you need this feature."))?;
+                    let a = a.get_item().ok_or_else(|| MergeError::new("Parameter references are not yet supported. Please open an issue if you need this feature."))?;
+                    let b = b.get_item().ok_or_else(|| MergeError::new("Parameter references are not yet supported. Please open an issue if you need this feature."))?;
                     if a.name != b.name {
                         return Err(MergeError(format!("PathItem {} parameter {} does not have the same name as {}", path, a.name, b.name)));
                     }
