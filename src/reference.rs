@@ -134,6 +134,10 @@ impl<T> RefOr<T> {
             RefOr::Item(i) => Some(i),
         }
     }
+
+    pub fn to_mut(&mut self) -> &mut T {
+        self.as_mut().expect("Not an item")
+    }
 }
 
 fn resolve_helper<'a>(reference: &str, spec: &'a OpenAPI, seen: &mut HashSet<String>) -> &'a Schema {
