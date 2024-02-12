@@ -1,6 +1,6 @@
 [package]
 name = "openapiv3-extended"
-version = "5.1.1"
+version = "6.0.0"
 authors = ["Kurt Wolf <kurtwolfbuilds@gmail.com>"]
 edition = "2018"
 license = "MIT/Apache-2.0"
@@ -23,7 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 indexmap = { version = "2", features = ["serde"] }
 anyhow = "1.0.71"
-http = "0.2.9"
+http = "1.0.0"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
