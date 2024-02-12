@@ -1,7 +1,6 @@
 use crate::*;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use anyhow::{anyhow, Result};
 use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
