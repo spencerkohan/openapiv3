@@ -3,12 +3,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::RefOr;
 
+pub type RefOrMap<T> = RefMap<T>;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct RefOrMap<T>(IndexMap<String, RefOr<T>>);
+pub struct RefMap<T>(IndexMap<String, RefOr<T>>);
 
 impl<T> RefOrMap<T> {
     pub fn new() -> Self {
-        RefOrMap(IndexMap::new())
+        RefMap(IndexMap::new())
     }
 
     /// Directly get the inner struct of a RefOr::Item
@@ -58,11 +60,11 @@ impl<T> RefOrMap<T> {
 
 impl<T> std::iter::FromIterator<(String, RefOr<T>)> for RefOrMap<T> {
     fn from_iter<I: IntoIterator<Item = (String, RefOr<T>)>>(iter: I) -> Self {
-        RefOrMap(IndexMap::from_iter(iter))
+        RefMap(IndexMap::from_iter(iter))
     }
 }
 
-impl<T> IntoIterator for RefOrMap<T> {
+impl<T> IntoIterator for RefMap<T> {
     type Item = (String, RefOr<T>);
     type IntoIter = indexmap::map::IntoIter<String, RefOr<T>>;
 
@@ -71,7 +73,7 @@ impl<T> IntoIterator for RefOrMap<T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a RefOrMap<T> {
+impl<'a, T> IntoIterator for &'a RefMap<T> {
     type Item = (&'a String, &'a RefOr<T>);
     type IntoIter = indexmap::map::Iter<'a, String, RefOr<T>>;
 
@@ -80,7 +82,7 @@ impl<'a, T> IntoIterator for &'a RefOrMap<T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a mut RefOrMap<T> {
+impl<'a, T> IntoIterator for &'a mut RefMap<T> {
     type Item = (&'a String, &'a mut RefOr<T>);
     type IntoIter = indexmap::map::IterMut<'a, String, RefOr<T>>;
 
@@ -89,9 +91,9 @@ impl<'a, T> IntoIterator for &'a mut RefOrMap<T> {
     }
 }
 
-impl<T> Default for RefOrMap<T> {
+impl<T> Default for RefMap<T> {
     fn default() -> Self {
-        RefOrMap(IndexMap::default())
+        RefMap(IndexMap::default())
     }
 }
 
@@ -101,9 +103,9 @@ impl<T> Into<IndexMap<String, RefOr<T>>> for RefOrMap<T> {
     }
 }
 
-impl<T> From<IndexMap<String, RefOr<T>>> for RefOrMap<T> {
+impl<T> From<IndexMap<String, RefOr<T>>> for RefMap<T> {
     fn from(map: IndexMap<String, RefOr<T>>) -> Self {
-        RefOrMap(map)
+        RefMap(map)
     }
 }
 
@@ -113,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_oa_ref_map_insert_coercion() {
-        let mut s: RefOrMap<usize> = RefOrMap(IndexMap::new());
+        let mut s: RefOrMap<usize> = RefMap(IndexMap::new());
         s.insert("a", 1);
     }
 }

@@ -50,10 +50,11 @@ impl std::fmt::Display for SchemaReference {
 
 /// Exists for backwards compatibility.
 pub type ReferenceOr<T> = RefOr<T>;
+pub type RefOr<T> = Ref<T>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
-pub enum RefOr<T> {
+pub enum Ref<T> {
     Reference {
         #[serde(rename = "$ref")]
         reference: String,
@@ -61,19 +62,19 @@ pub enum RefOr<T> {
     Item(T),
 }
 
-impl<T> RefOr<T> {
+impl<T> Ref<T> {
     pub fn ref_(r: &str) -> Self {
-        RefOr::Reference {
+        Ref::Reference {
             reference: r.to_owned(),
         }
     }
     pub fn schema_ref(r: &str) -> Self {
-        RefOr::Reference {
+        Ref::Reference {
             reference: format!("#/components/schemas/{}", r),
         }
     }
 
-    pub fn boxed(self) -> Box<RefOr<T>> {
+    pub fn boxed(self) -> Box<Ref<T>> {
         Box::new(self)
     }
 
@@ -221,24 +222,24 @@ impl RefOr<Response> {
     }
 }
 
-impl RefOr<RequestBody> {
+impl Ref<RequestBody> {
     pub fn resolve<'a>(&'a self, spec: &'a OpenAPI) -> Result<&'a RequestBody> {
         match self {
-            RefOr::Reference { reference } => {
+            Ref::Reference { reference } => {
                 let name = get_request_body_name(&reference)?;
                 spec.request_bodies.get(name)
                     .ok_or(anyhow!("{} not found in OpenAPI spec.", reference))?
                     .as_item()
                     .ok_or(anyhow!("{} is circular.", reference))
             }
-            RefOr::Item(request_body) => Ok(request_body),
+            Ref::Item(request_body) => Ok(request_body),
         }
     }
 }
 
 impl<T: Default> Default for RefOr<T> {
     fn default() -> Self {
-        RefOr::Item(T::default())
+        Ref::Item(T::default())
     }
 }
 
