@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 
 // http://json.schemastore.org/swagger-2.0
 
@@ -155,6 +155,8 @@ pub struct PathItem {
     pub head: Option<Operation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parameters: Option<Vec<Parameter>>,
+    #[serde(flatten, deserialize_with = "crate::util::deserialize_extensions")]
+    pub extensions: IndexMap<String, serde_json::Value>,
 }
 
 /// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#operation-object
@@ -180,6 +182,8 @@ pub struct Operation {
     pub parameters: Option<Vec<Parameter>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security: Option<Vec<SecurityRequirement>>,
+    #[serde(flatten, deserialize_with = "crate::util::deserialize_extensions")]
+    pub extensions: IndexMap<String, serde_json::Value>,
 }
 
 /// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md#securityRequirementObject
@@ -361,7 +365,7 @@ mod tests {
                 location: serde_json::from_str("\"query\"").unwrap(),
                 description: None,
             })
-                .unwrap(),
+            .unwrap(),
             json
         );
     }
@@ -415,7 +419,7 @@ mod tests {
                 scopes,
                 description: None,
             })
-                .unwrap()
+            .unwrap()
         );
     }
 
@@ -438,7 +442,7 @@ mod tests {
             serde_json::to_string(&ReferenceOrSchema::Reference {
                 reference: "foo/bar".into()
             })
-                .unwrap()
+            .unwrap()
         );
     }
 }
