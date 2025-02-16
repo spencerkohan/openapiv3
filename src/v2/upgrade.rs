@@ -1,8 +1,8 @@
-use std::convert::TryInto;
-use indexmap::IndexMap;
+use super::schema as v2;
 use crate as v3;
 use crate::{Parameter, StatusCode};
-use super::schema as v2;
+use indexmap::IndexMap;
+use std::convert::TryInto;
 
 trait TryRemove<T> {
     fn try_remove(&mut self, i: usize) -> Option<T>;
@@ -68,11 +68,14 @@ impl Into<v3::OpenAPI> for v2::OpenAPI {
             info: info.into(),
             servers: host
                 .map(|h| {
-                    let scheme = schemes.and_then(|mut s| if s.len() >= 1 {
-                        Some(s.remove(0))
-                    } else {
-                        None
-                    })
+                    let scheme = schemes
+                        .and_then(|mut s| {
+                            if s.len() >= 1 {
+                                Some(s.remove(0))
+                            } else {
+                                None
+                            }
+                        })
                         .map(|s| s.as_str())
                         .unwrap_or("http");
                     let url = format!("{}://{}{}", scheme, h, base_path.unwrap_or_default());
@@ -80,11 +83,13 @@ impl Into<v3::OpenAPI> for v2::OpenAPI {
                         url,
                         ..v3::Server::default()
                     }]
-                }).unwrap_or_default(),
+                })
+                .unwrap_or_default(),
             paths: paths.into(),
             components,
             security: security.unwrap_or_default(),
-            tags: tags.unwrap_or_default()
+            tags: tags
+                .unwrap_or_default()
                 .into_iter()
                 .map(|t| t.into())
                 .collect(),
@@ -116,6 +121,7 @@ impl Into<v3::RefOr<v3::PathItem>> for v2::PathItem {
             head,
             patch,
             parameters,
+            extensions,
         } = self;
         v3::RefOr::Item(v3::PathItem {
             summary: None,
@@ -134,7 +140,7 @@ impl Into<v3::RefOr<v3::PathItem>> for v2::PathItem {
                 .into_iter()
                 .flat_map(|p| p.try_into().ok())
                 .collect(),
-            extensions: Default::default(),
+            extensions,
         })
     }
 }
@@ -203,12 +209,9 @@ impl Into<v3::Schema> for v2::Schema {
             return v3::Schema {
                 data: schema_data,
                 kind: v3::SchemaKind::AllOf {
-                    all_of: all_of
-                        .into_iter()
-                        .map(|s| s.into())
-                        .collect()
+                    all_of: all_of.into_iter().map(|s| s.into()).collect(),
                 },
-            }
+            };
         }
 
         let schema_type = schema_type.unwrap_or_else(|| "object".to_string());
@@ -220,10 +223,7 @@ impl Into<v3::Schema> for v2::Schema {
             }
             v3::SchemaKind::Type(v3::Type::Object(ref mut o)) => {
                 if let Some(properties) = properties {
-                    o.properties = properties
-                        .into_iter()
-                        .map(|(k, v)| (k, v.into()))
-                        .collect();
+                    o.properties = properties.into_iter().map(|(k, v)| (k, v.into())).collect();
                 }
                 o.required = required.unwrap_or_default();
             }
@@ -250,7 +250,10 @@ impl TryInto<v3::RefOr<v3::Parameter>> for v2::Parameter {
 
     fn try_into(self) -> Result<v3::RefOr<v3::Parameter>, Self::Error> {
         if !self.valid_v3_location() {
-            return Err(anyhow::anyhow!("Invalid location: {}", serde_json::to_string(&self.location).unwrap()));
+            return Err(anyhow::anyhow!(
+                "Invalid location: {}",
+                serde_json::to_string(&self.location).unwrap()
+            ));
         }
         let v2::Parameter {
             name,
@@ -304,32 +307,29 @@ impl TryInto<v3::RefOr<v3::Parameter>> for v2::Parameter {
             extensions: Default::default(),
         };
         let kind = match location {
-            v2::ParameterLocation::Query => {
-                v3::ParameterKind::Query {
-                    allow_reserved: false,
-                    style: Default::default(),
-                    allow_empty_value: None,
-                }
+            v2::ParameterLocation::Query => v3::ParameterKind::Query {
+                allow_reserved: false,
+                style: Default::default(),
+                allow_empty_value: None,
+            },
+            v2::ParameterLocation::Header => v3::ParameterKind::Header {
+                style: Default::default(),
+            },
+            v2::ParameterLocation::Path => v3::ParameterKind::Path {
+                style: Default::default(),
+            },
+            v2::ParameterLocation::FormData | v2::ParameterLocation::Body => {
+                panic!("Invalid location")
             }
-            v2::ParameterLocation::Header => {
-                v3::ParameterKind::Header {
-                    style: Default::default(),
-                }
-            }
-            v2::ParameterLocation::Path => {
-                v3::ParameterKind::Path {
-                    style: Default::default(),
-                }
-            }
-            | v2::ParameterLocation::FormData
-            | v2::ParameterLocation::Body => panic!("Invalid location"),
         };
         let parameter = Parameter { data, kind };
         Ok(v3::RefOr::Item(parameter))
     }
 }
 
-fn split_params_into_params_and_body(params: Option<Vec<v2::Parameter>>) -> (Vec<v2::Parameter>, Vec<v2::Parameter>) {
+fn split_params_into_params_and_body(
+    params: Option<Vec<v2::Parameter>>,
+) -> (Vec<v2::Parameter>, Vec<v2::Parameter>) {
     params
         .unwrap_or_default()
         .into_iter()
@@ -349,6 +349,7 @@ impl Into<v3::Operation> for v2::Operation {
             parameters,
             mut responses,
             security,
+            extensions,
         } = self;
         let (parameters, body) = split_params_into_params_and_body(parameters);
         let body = body.into();
@@ -358,10 +359,15 @@ impl Into<v3::Operation> for v2::Operation {
             r.default = responses.swap_remove("default").map(|r| r.into());
             r.responses = responses
                 .into_iter()
-                .map(|(k, v)| (
-                    StatusCode::Code(k.parse::<u16>().expect(&format!("Invalid status code: {}", k))),
-                    v.into()
-                ))
+                .map(|(k, v)| {
+                    (
+                        StatusCode::Code(
+                            k.parse::<u16>()
+                                .expect(&format!("Invalid status code: {}", k)),
+                        ),
+                        v.into(),
+                    )
+                })
                 .collect();
             r
         };
@@ -380,7 +386,7 @@ impl Into<v3::Operation> for v2::Operation {
             deprecated: false,
             security,
             servers: vec![],
-            extensions: Default::default(),
+            extensions,
         }
     }
 }
@@ -390,8 +396,8 @@ impl Into<v3::RefOr<v3::Schema>> for v2::ReferenceOrSchema {
         match self {
             v2::ReferenceOrSchema::Item(s) => v3::RefOr::Item(s.into()),
             v2::ReferenceOrSchema::Reference { reference } => v3::RefOr::Reference {
-                reference: rewrite_ref(&reference)
-            }
+                reference: rewrite_ref(&reference),
+            },
         }
     }
 }
@@ -446,10 +452,7 @@ impl Into<v3::RequestBody> for Vec<v2::Parameter> {
 
 impl Into<v3::ExternalDocumentation> for v2::ExternalDoc {
     fn into(self) -> v3::ExternalDocumentation {
-        let v2::ExternalDoc {
-            description,
-            url,
-        } = self;
+        let v2::ExternalDoc { description, url } = self;
         v3::ExternalDocumentation {
             description,
             url,
@@ -500,11 +503,7 @@ impl Into<v3::Info> for v2::Info {
 
 impl Into<v3::Contact> for v2::Contact {
     fn into(self) -> v3::Contact {
-        let v2::Contact {
-            name,
-            url,
-            email,
-        } = self;
+        let v2::Contact { name, url, email } = self;
         v3::Contact {
             name,
             url,
@@ -516,10 +515,7 @@ impl Into<v3::Contact> for v2::Contact {
 
 impl Into<v3::License> for v2::License {
     fn into(self) -> v3::License {
-        let v2::License {
-            name,
-            url,
-        } = self;
+        let v2::License { name, url } = self;
         v3::License {
             name: name.unwrap_or_default(),
             url,
@@ -531,7 +527,11 @@ impl Into<v3::License> for v2::License {
 impl Into<v3::RefOr<v3::SecurityScheme>> for v2::Security {
     fn into(self) -> v3::RefOr<v3::SecurityScheme> {
         match self {
-            v2::Security::ApiKey { name, location, description } => {
+            v2::Security::ApiKey {
+                name,
+                location,
+                description,
+            } => {
                 let location = match location {
                     v2::ApiKeyLocation::Query => v3::APIKeyLocation::Query,
                     v2::ApiKeyLocation::Header => v3::APIKeyLocation::Header,
@@ -542,14 +542,18 @@ impl Into<v3::RefOr<v3::SecurityScheme>> for v2::Security {
                     description,
                 })
             }
-            v2::Security::Basic { description } => {
-                v3::RefOr::Item(v3::SecurityScheme::HTTP {
-                    scheme: "basic".to_string(),
-                    bearer_format: None,
-                    description,
-                })
-            }
-            v2::Security::Oauth2 { flow, authorization_url, token_url, scopes, description } => {
+            v2::Security::Basic { description } => v3::RefOr::Item(v3::SecurityScheme::HTTP {
+                scheme: "basic".to_string(),
+                bearer_format: None,
+                description,
+            }),
+            v2::Security::Oauth2 {
+                flow,
+                authorization_url,
+                token_url,
+                scopes,
+                description,
+            } => {
                 let mut implicit = None;
                 let mut password = None;
                 let mut client_credentials = None;
@@ -591,10 +595,7 @@ impl Into<v3::RefOr<v3::SecurityScheme>> for v2::Security {
                     client_credentials,
                     authorization_code,
                 };
-                v3::RefOr::Item(v3::SecurityScheme::OAuth2 {
-                    flows,
-                    description,
-                })
+                v3::RefOr::Item(v3::SecurityScheme::OAuth2 { flows, description })
             }
         }
     }
@@ -616,10 +617,13 @@ impl Into<v3::RefOr<v3::Response>> for v2::Response {
             description,
             content: {
                 let mut map = IndexMap::new();
-                map.insert("application/json".to_string(), v3::MediaType {
-                    schema: Some(schema.into()),
-                    ..v3::MediaType::default()
-                });
+                map.insert(
+                    "application/json".to_string(),
+                    v3::MediaType {
+                        schema: Some(schema.into()),
+                        ..v3::MediaType::default()
+                    },
+                );
                 map
             },
             ..v3::Response::default()
