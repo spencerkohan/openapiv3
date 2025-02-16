@@ -1,13 +1,13 @@
 [package]
-name = "openapiv3-extended"
+name = "openapiv3-extended-2"
 version = "6.0.0"
-authors = ["Kurt Wolf <kurtwolfbuilds@gmail.com>"]
+authors = ["Spencer Kohan <spencerkohan@gmail.com"]
 edition = "2018"
 license = "MIT/Apache-2.0"
 keywords = ["openapi", "v3"]
-homepage = "https://github.com/kurtbuilds/openapiv3"
-repository = "https://github.com/kurtbuilds/openapiv3"
-documentation = "https://docs.rs/openapiv3-extended"
+homepage = "https://github.com/spencerkohan/openapiv3"
+repository = "https://github.com/spencerkohan/openapiv3"
+documentation = "https://docs.rs/openapiv3-extended-2"
 description = "This crate provides data structures that represent the OpenAPI v3.0.x specification easily deserializable with serde."
 
 [package.metadata.docs.rs]
