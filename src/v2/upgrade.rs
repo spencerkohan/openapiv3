@@ -33,6 +33,7 @@ impl Into<v3::OpenAPI> for v2::OpenAPI {
             security,
             tags,
             external_docs,
+            extensions,
         } = self;
         let mut components = v3::Components::default();
 
@@ -96,7 +97,7 @@ impl Into<v3::OpenAPI> for v2::OpenAPI {
             external_docs: external_docs
                 .and_then(|mut e| e.try_remove(0))
                 .map(|e| e.into()),
-            extensions: Default::default(),
+            extensions,
         }
     }
 }
